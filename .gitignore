@@ -1,0 +1,125 @@
+# --------------------
+.env
+.env.*
+!.env.template
+!.env.example
+*.env.local
+secrets/
+*.pem
+*.key
+
+# ---------- Frontend (Node / Vite / React) ----------
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+frontend/.vite/
+frontend/.cache/
+frontend/coverage/
+frontend/.turbo/
+frontend/.next/
+frontend/out/
+frontend/stats.html
+*.tsbuildinfo
+.eslintcache
+.stylelintcache
+
+# Package manager lockfiles kept, but ignore misc logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ---------- Python / Backend (safety net) ----------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+*.egg-info/
+.eggs/
+dist/
+build/
+site/
+
+# ---------- Docker ----------
+AGENTS.md
+
+# ---------- Docker ----------
+*.pid
+docker-compose.override.yml
+docker-compose.*.local.yml
+
+# ---------- Databases / dumps ----------
+*.sqlite
+*.sqlite3
+*.db
+*.dump
+*.sql.gz
+pgdata/
+redis-data/
+
+# ---------- Editors / IDEs ----------
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json.example
+!.vscode/launch.json.example
+*.swp
+*.swo
+*.swn
+*.tmp
+*~
+
+# ---------- OS ----------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ---------- Logs / Runtime ----------
+*.log
+logs/
+tmp/
+temp/
+.cache/
+.pids/
+*.pid
+*.seed
+
+# ---------- Testing / Coverage ----------
+coverage/
+.coverage
+.coverage.*
+lcov.info
+junit.xml
+test-results/
+playwright-report/
+playwright/.cache/
+
+# ---------- CI / CD ----------
+# (keep workflow files, ignore local overrides)
+.actrc
+
+# ---------- Misc ----------
+*.bak
+*.orig
+*.rej
+*.patch
+cookies.txt
+*.har
+.DS_Store
