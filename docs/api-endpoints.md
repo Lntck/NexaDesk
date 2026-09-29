@@ -1,5 +1,5 @@
 > This document describes the intended API design and domain model.
-> Last reviewed: 2026-09-29
+> Last reviewed: 29-09-2026
 
 # NexaDesk — Backend API Specification
 
@@ -32,6 +32,17 @@ The existing authentication layer already provides:
 - health probes
 
 Domain APIs are added under `/api/v1/`.
+
+## 1.1 Document Status
+
+This document is the executable contract for the API. Every section is in one of two states:
+
+```text
+Implemented  — exists in the codebase and is covered by tests
+Planned      — the contract for upcoming work; implement exactly as specified here
+```
+
+Currently Implemented: §6 Authentication and health probes. Everything else is Planned.
 
 ---
 
@@ -107,18 +118,43 @@ Role (global)     user | admin
 ProjectRole       owner | admin | member | viewer
 Priority          LOW | MEDIUM | HIGH | CRITICAL        (default: MEDIUM)
 TaskRelationType  BLOCKS | BLOCKED_BY | RELATES_TO | DUPLICATES | DUPLICATED_BY
-ActivityEventType project.created | project.updated | member.added | member.removed |
+ActivityEventType project.created | project.updated | project.archived |
+                  project.restored | member.added | member.removed |
                   member.role_changed | task.created | task.updated | task.deleted |
-                  task.assigned | task.unassigned | task.status_changed |
+                  task.assigned | task.unassigned | task.status_changed | task.moved |
+                  relation.added | relation.removed | watcher.added | watcher.removed |
                   comment.created | comment.updated | comment.deleted |
-                  label.added | label.removed
-NotificationType  task.assigned | comment.created | task.status_changed |
-                  task.updated | member.added
+                  comment.mentioned | label.added | label.removed
+NotificationType  task.assigned | comment.created | comment.mentioned |
+                  task.status_changed | task.updated | member.added
 ```
 
 Event IDs (`ActivityEvent.id` and the SSE `id:` field) are opaque,
 lexicographically sortable strings (ULID or UUIDv7) so they can be used directly
 as `Last-Event-ID` for replay.
+
+## 2.3 Storage Invariants
+
+Enforced by the database, not by service-level checks alone:
+
+```text
+project_members   UNIQUE (project_id, user_id)
+projects          exactly one owner: partial unique index on (owner_id) per project
+                  or a constraint trigger; ownership moves only via transfer
+project.key       UNIQUE
+task_statuses     UNIQUE (project_id, key)
+labels            UNIQUE (project_id, lower(name))
+tasks             UNIQUE (project_id, number)
+task_watchers     UNIQUE (task_id, user_id)
+task_labels       UNIQUE (task_id, label_id)
+task_relations    UNIQUE (task_id, target_task_id, type)
+comments          soft-deleted rows stay unique on (id); no hard delete
+tasks.deleted_at  NULL for live tasks; non-null for soft-deleted
+```
+
+`Task.number` is allocated with a per-project sequence (`SELECT ... FOR UPDATE`
+on the project row or a dedicated counter table) so concurrent task creation
+cannot produce duplicate `NEXA-17` keys.
 
 ---
 
@@ -156,14 +192,39 @@ Recommended permissions:
 | Manage members | Yes | Yes | No | No |
 | Create task | Yes | Yes | Yes | No |
 | Edit task | Yes | Yes | Yes | No |
-| Delete task | Yes | Yes | Restricted | No |
+| Delete task | Yes | Yes | Own tasks | No |
 | Assign task | Yes | Yes | Yes | No |
 | Change status | Yes | Yes | Yes | No |
 | Comment | Yes | Yes | Yes | No |
 | Manage labels | Yes | Yes | No | No |
-| Watch task | Yes | Yes | Yes | No |
+| Watch task | Yes | Yes | Yes | Yes |
 
 Permission checks must live in the service/policy layer rather than being duplicated inside every endpoint.
+
+`Restricted` and `Own tasks` mean: a `member` may delete only a task they created;
+`owner`/`admin` may delete any task.
+
+## 3.3 Global Admin Policy
+
+The global `admin` role does not grant automatic membership in every project.
+Global admins get a separate platform API (`/api/v1/admin/...`, see §28) for
+account management and moderation. To read or modify project data, a global
+admin must be a project member like everyone else.
+
+Exception: a moderation endpoint may soft-delete abusive content (comments,
+projects) without membership, and this action is always written to the
+activity log.
+
+## 3.4 Not-Found vs Forbidden
+
+Rule for every project-scoped resource (project, task, comment, label):
+
+```text
+404 — the resource does not exist OR the user is not a member of its project
+403 — the user can see the resource but lacks permission for the action
+```
+
+This prevents resource enumeration and is the single policy for the whole API.
 
 ---
 
@@ -187,13 +248,39 @@ Content type:
 Content-Type: application/json
 ```
 
-Application errors:
+Application errors always carry a human-readable `detail` and a stable
+machine-readable `code`:
 
 ```json
 {
-  "detail": "Human-readable error message"
+  "detail": "Task cannot transition from DONE to TODO",
+  "code": "invalid_transition"
 }
 ```
+
+Error codes are stable identifiers meant for program handling. Clients branch
+on `code`, never on the text of `detail`. Initial code registry:
+
+```text
+validation_error             422   schema violation
+unauthenticated              401   missing/invalid token
+token_invalid                401   refresh token rejected
+forbidden                    403   member without permission
+project_not_found            404   also returned to non-members
+task_not_found               404   also returned to non-members
+user_not_found               404
+comment_not_found            404
+already_exists               409   duplicate key, label attach, etc.
+invalid_transition           409   status change not allowed
+stale_version                409   If-Match mismatch (see section 32)
+status_in_use                409   deleting a status that still has tasks
+archived_collection          409   write operation on an archived project
+payload_error                422   semantic validation (bad ids, cycles)
+rate_limited                 429
+```
+
+The registry grows with the domain model; every new domain error gets a code
+from the start rather than a bare string.
 
 Common statuses:
 
@@ -210,6 +297,20 @@ Common statuses:
 422 Unprocessable Entity
 429 Too Many Requests
 ```
+
+## 4.1 PATCH Semantics
+
+All `PATCH` endpoints use JSON Merge Patch rules:
+
+```text
+omitted field  → unchanged
+explicit null  → cleared (only nullable fields)
+unknown field  → 422 validation_error
+```
+
+Each `PATCH` section below lists its editable fields explicitly. Fields with
+domain meaning (`status`, `assignee`, `order`) are never editable through
+`PATCH`; they change only through command endpoints (see section 33).
 
 ---
 
