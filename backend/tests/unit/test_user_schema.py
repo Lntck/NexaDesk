@@ -53,3 +53,12 @@ def test_user_register_invalid_password(password):
             email="tester@example.com",
             password=SecretStr(password),
         )
+
+
+def test_user_register_email_is_lowercased():
+    reg = UserRegister(
+        username="tester",
+        email="Tester@Example.COM",
+        password=SecretStr("password"),
+    )
+    assert reg.email == "tester@example.com"

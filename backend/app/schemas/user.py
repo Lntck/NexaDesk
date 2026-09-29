@@ -15,6 +15,27 @@ class UserBase(BaseModel):
     @field_validator("username")
     @classmethod
     def normalize_username(cls, value: str) -> str:
+        """Lowercase the username before validation of other rules.
+
+        Args:
+            value: raw username from the request.
+
+        Returns:
+            str: normalized lowercase username.
+        """
+        return value.lower()
+
+    @field_validator("email")
+    @classmethod
+    def normalize_email(cls, value: str) -> str:
+        """Lowercase the email so uniqueness checks are case insensitive.
+
+        Args:
+            value: raw email from the request.
+
+        Returns:
+            str: normalized lowercase email.
+        """
         return value.lower()
 
 
