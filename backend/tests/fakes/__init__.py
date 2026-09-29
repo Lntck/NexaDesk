@@ -1,3 +1,3 @@
-from .user_crud import FakeUserCRUD
+from .user_crud import FakeUserCRUD, InactiveUserCRUD
 
-__all__ = ("FakeUserCRUD",)
+__all__ = ("FakeUserCRUD", "InactiveUserCRUD")

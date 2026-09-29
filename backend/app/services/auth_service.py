@@ -57,9 +57,27 @@ class AuthService:
         username: str,
         password: str,
     ) -> tuple[str, str]:
+        """Authenticate a user and issue a token pair.
+
+        Args:
+            session: active database session.
+            redis_client: redis client storing refresh tokens.
+            username: login of the account.
+            password: plaintext password to verify.
+
+        Returns:
+            tuple[str, str]: access and refresh tokens.
+
+        Raises:
+            InvalidCredentials: when the account is unknown, deactivated
+                or the password does not match.
+        """
         try:
             user = await self.user_service.get_by_username(session, username)
         except UserNotFound:
+            raise InvalidCredentials()
+
+        if not user.is_active:
             raise InvalidCredentials()
 
         if not verify_password(password, user.password_hash):
@@ -88,6 +106,20 @@ class AuthService:
         redis_client: redis.Redis,
         refresh_token: str,
     ) -> tuple[str, str]:
+        """Rotate a refresh token and issue a new token pair.
+
+        Args:
+            session: active database session.
+            redis_client: redis client storing refresh tokens.
+            refresh_token: refresh token to rotate.
+
+        Returns:
+            tuple[str, str]: new access and refresh tokens.
+
+        Raises:
+            TokenInvalidError: when the token is unknown, already used,
+                belongs to a missing or deactivated account.
+        """
         payload = self.jwt_manager.decode_token(
             refresh_token, self.settings.refresh_secret
         )
@@ -100,6 +132,9 @@ class AuthService:
         try:
             user = await self.user_service.get_by_id(session, user_id)
         except UserNotFound:
+            raise TokenInvalidError("Refresh token is invalid")
+
+        if not user.is_active:
             raise TokenInvalidError("Refresh token is invalid")
 
         new_access_token, _ = self.jwt_manager.create_token(

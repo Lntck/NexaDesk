@@ -1,9 +1,11 @@
 import pytest
 from pydantic import SecretStr
+from sqlalchemy.exc import IntegrityError
 
 from app.exceptions import UserAlreadyExists, UserNotFound
 from app.schemas import UserRegister
 from app.services import UserService
+from app.services.user_service import is_unique_violation
 from tests.fakes import FakeUserCRUD
 
 
@@ -88,3 +90,33 @@ async def test_get_all_users(dummy_session):
 
     assert len(users) == 1
     assert users[0].username == "duplicate"
+
+
+@pytest.mark.asyncio
+async def test_register_non_unique_integrity_error(dummy_session):
+    class BrokenCRUD(FakeUserCRUD):
+        async def create_user(self, session, user):
+            raise IntegrityError(
+                "INSERT INTO users ...",
+                {},
+                Exception("FOREIGN KEY constraint failed: users.tenant_id"),
+            )
+
+    service = UserService(BrokenCRUD())
+
+    reg_data = UserRegister(
+        username="tester", email="tester@example.com", password=SecretStr("password")
+    )
+
+    with pytest.raises(IntegrityError):
+        await service.create_user(dummy_session, reg_data)
+
+
+def test_is_unique_violation_true_for_unique():
+    exc = IntegrityError("stmt", {}, Exception("UNIQUE constraint failed: users.email"))
+    assert is_unique_violation(exc) is True
+
+
+def test_is_unique_violation_false_for_other():
+    exc = IntegrityError("stmt", {}, Exception("FOREIGN KEY constraint failed"))
+    assert is_unique_violation(exc) is False

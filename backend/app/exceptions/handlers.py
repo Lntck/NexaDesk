@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Request
+from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 from .custom import AppException
@@ -9,15 +10,39 @@ from .custom import AppException
 def register_exception_handlers(app: FastAPI) -> None:
     """
     Register global exception handlers for the FastAPI application.
+
+    Every error payload follows the contract envelope: human readable
+    "detail" plus stable machine readable "code".
     """
-    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore
+
+    @app.exception_handler(RateLimitExceeded)
+    async def handle_rate_limit(request: Request, exc: RateLimitExceeded):
+        return JSONResponse(
+            status_code=429,
+            content={"detail": "Rate limit exceeded", "code": "rate_limited"},
+        )
+
+    @app.exception_handler(RequestValidationError)
+    async def handle_request_validation(request: Request, exc: RequestValidationError):
+        return JSONResponse(
+            status_code=422,
+            content={
+                "detail": "Request validation error",
+                "code": "validation_error",
+                "errors": jsonable_encoder(exc.errors()),
+            },
+        )
 
     @app.exception_handler(AppException)
     async def handle_app_exception(request: Request, exc: AppException):
-        return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"detail": exc.detail, "code": exc.code},
+        )
 
     @app.exception_handler(Exception)
     async def handle_any_exception(request: Request, exc: Exception):
         return JSONResponse(
-            status_code=500, content={"detail": "Internal server error"}
+            status_code=500,
+            content={"detail": "Internal server error", "code": "internal_error"},
         )

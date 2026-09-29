@@ -341,6 +341,14 @@ Response:
 }
 ```
 
+Limits and rules:
+
+```text
+page       >= 1
+page_size  1..100, default 20
+sort       whitelist per collection; unknown value → 422 validation_error
+```
+
 Cursor pagination may be introduced later for very large collections.
 
 ---
@@ -589,6 +597,9 @@ owner
 project admin
 ```
 
+The project `key` is immutable; rename of the key is not supported because
+task keys like `NEXA-17` are referenced in history and comments.
+
 ---
 
 ## POST `/api/v1/projects/{project_id}/archive`
@@ -611,6 +622,52 @@ After archival:
 ## POST `/api/v1/projects/{project_id}/restore`
 
 Restore an archived project.
+
+---
+
+## POST `/api/v1/projects/{project_id}/transfer-ownership`
+
+Transfer project ownership to another member.
+
+### Request
+
+```json
+{
+  "user_id": 17
+}
+```
+
+### Response
+
+```json
+{
+  "id": 42,
+  "key": "NEXA",
+  "name": "NexaDesk",
+  "owner": {
+    "id": 17,
+    "username": "john"
+  }
+}
+```
+
+### Business rules
+
+- Only the current owner can transfer ownership.
+- The target user must already be a project member.
+- After the transfer the previous owner becomes `admin`.
+- Both membership rows change in one transaction; at no point a project has
+  two owners (see the invariants in section 2.3).
+- The caller must re-read the role from the database for this operation; a
+  stale role from an access token is not enough (see section 32).
+
+### Errors
+
+```text
+404 — project or user not found (or user is not a member)
+403 — caller is not the owner
+409 — target is already the owner
+```
 
 ---
 
@@ -970,7 +1027,7 @@ Get a single task.
 
 Update editable task fields.
 
-### Request
+Request:
 
 ```json
 {
@@ -980,6 +1037,24 @@ Update editable task fields.
   "due_date": "2026-10-20"
 }
 ```
+
+Editable fields for `PATCH`:
+
+```text
+title
+description
+priority
+due_date
+estimated_hours
+parent_task_id
+```
+
+Status, assignee and rank are never editable here. See the command endpoints
+in section 33.
+
+`version` in the response grows with every change. Optimistic concurrency is
+mandatory on `PATCH` and `DELETE` since Phase 1: the request must carry
+`If-Match: <version>`, a mismatch is 409 stale_version (section 32).
 
 ### Important
 
@@ -1076,9 +1151,27 @@ Example:
 
 ```json
 {
-  "detail": "Task cannot transition from DONE to TODO"
+  "detail": "Task cannot transition from DONE to TODO",
+  "code": "invalid_transition"
 }
 ```
+
+### Transition matrix
+
+In v1 transitions follow the status positions: a task may move one position
+left or right inside its project. Any other target status is rejected with
+409 invalid_transition. The matrix for default statuses:
+
+```text
+from \ to     TODO  IN_PROGRESS  REVIEW  DONE
+TODO            -        x          -      -
+IN_PROGRESS     x        -          x      -
+REVIEW          -        x          -      x
+DONE            -        -          x      -
+```
+
+Custom statuses join the matrix by their position, so the rule is always
+the same: only adjacent columns are reachable.
 
 ---
 
@@ -1158,6 +1251,11 @@ Recommended first-version policy:
 - labels are preserved only when matching labels exist in target project
 - comments remain attached to the task
 
+This endpoint ships in Phase 5. A move request must include an explicit map
+from source statuses to target statuses (at minimum the source status of the
+moving task); the server rejects a move with unmapped status using
+422 payload_error rather than guessing after project identity changed.
+
 ---
 
 # 14. Kanban Board
@@ -1193,13 +1291,45 @@ Return tasks grouped by status.
 }
 ```
 
-The frontend can use the same transition endpoint for drag-and-drop:
+Horizontal moves between columns use the transition endpoint above:
 
 ```text
 POST /api/v1/tasks/{task_id}/transition
 ```
 
-Do not create a separate "move card" endpoint.
+Do not create a separate "move card" endpoint. Vertical ordering inside a
+column has its own key set and is handled by `reorder` (below), so column
+changes without reordering stay simple `transition` calls.
+
+Cards are ordered inside every column by `rank` (see section 10). Vertical
+ordering changes use a separate command endpoint because a key set change
+cannot be expressed through `PATCH` semantics:
+
+```text
+POST /api/v1/tasks/{task_id}/reorder
+```
+
+Request:
+
+```json
+{
+  "status_id": 1,
+  "before_task_id": 91,
+  "after_task_id": 87
+}
+```
+
+`status_id` names the target column. It may differ from the current status;
+in that case the transition matrix from section 11 still applies and the
+command returns 409 invalid_transition on a forbidden move. `before_task_id`
+places the card before that neighbor, `after_task_id` places it after. Send
+null and null to move the card to the top of the column, or null values of
+the pair for the end. The server recalculates ranks and answers with the
+final position.
+
+Board response and task lists respect `limit_per_column` on the board query
+(default 50): each column returns up to that many cards plus a
+`has_more` flag so huge projects stay usable. `GET /api/v1/projects/{project_id}/board?limit_per_column=50`.
 
 ---
 
@@ -1239,6 +1369,8 @@ Create a comment.
 - Comment creation generates an activity event.
 - Comment creation generates an SSE event.
 - Watchers may receive notifications.
+- `@username` mentions generate a notification to the mentioned user even
+  when he is not a watcher; mention parsing is done on save of the body.
 
 ---
 
@@ -1431,11 +1563,17 @@ task.assigned
 task.unassigned
 task.status_changed
 task.updated
+project.archived
+project.restored
 comment.created
 comment.updated
 comment.deleted
 label.added
 label.removed
+relation.added
+relation.removed
+watcher.added
+watcher.removed
 ```
 
 ---
@@ -1481,31 +1619,8 @@ Get notifications for the current user.
 ```text
 page
 page_size
-read
-```
-
----
-
-## GET `/api/v1/notifications/unread`
-
-Get unread notifications.
-
-Example:
-
-```json
-{
-  "items": [
-    {
-      "id": 100,
-      "type": "task.assigned",
-      "title": "Task assigned to you",
-      "message": "NEXA-17 was assigned to you",
-      "task_id": 123,
-      "read": false,
-      "created_at": "2026-09-29T17:05:00Z"
-    }
-  ]
-}
+read        false returns only unread notifications (replaces a separate
+            /notifications/unread endpoint)
 ```
 
 ---
@@ -1513,6 +1628,14 @@ Example:
 ## POST `/api/v1/notifications/{notification_id}/read`
 
 Mark one notification as read.
+
+Notification `type` values match activity events plus:
+
+```text
+mention
+```
+
+Mentions are created from `@username` in comment bodies (section 15).
 
 ---
 
@@ -1653,7 +1776,12 @@ the backend must:
 
 Unauthorized users must not be able to receive events from projects they cannot access.
 
-For browser clients, prefer an authentication mechanism compatible with your frontend architecture. If using native `EventSource`, avoid putting bearer tokens into URLs. A cookie-based authenticated session or an appropriate SSE-compatible auth bridge can be used.
+For browser clients the access token travels in the `Authorization: Bearer`
+header only; tokens in query strings or fragment are forbidden because URLs
+end up in logs. Native `EventSource` cannot set request headers, therefore
+the browser client opens the stream with `fetch` and reads `text/event-stream`
+as described in section 21. Cookie sessions are not an auth path for this
+stream.
 
 ---
 
@@ -1705,7 +1833,14 @@ A client should:
 2. Receive events.
 3. Keep the connection alive.
 4. Reconnect automatically after network failure.
-5. Use event IDs to recover from missed events if the implementation supports replay.
+5. Replay missed events after reconnect.
+
+Replay is based on `ActivityEvent` rows (section 19): on reconnect the client
+sends the last seen event ID (`Last-Event-ID` header), and the backend finds
+the stored `ActivityEvent.id` and streams everything after it. Redis Pub/Sub
+alone cannot replay; it only distributes live events, so persistence in
+`activity_events` is a hard precondition for this endpoint (the EventPublisher
+hook in section 31 must be wired to the outbox before SSE reaches production).
 
 Heartbeat example:
 
@@ -1714,7 +1849,11 @@ Heartbeat example:
 
 ```
 
-This prevents idle connections from being incorrectly closed by proxies.
+A heartbeat comment is sent about every 15 seconds so proxies do not close
+idle connections. The server limits (per client) are: one stream per project,
+maximum 5 minutes idle without successful heartbeat write, and automatic
+disconnect at 10k queued events (the client is expected to reconnect with
+replay).
 
 ---
 
@@ -1773,7 +1912,7 @@ Global search for the current user.
 ### Query
 
 ```text
-q
+q        required, 2..100 characters
 ```
 
 Example:
@@ -1807,6 +1946,18 @@ Full text search can be added later.
 
 # 28. Current User API
 
+## GET `/api/v1/me`
+
+Get the current user profile (id, username, email, global role).
+
+## PATCH `/api/v1/me`
+
+Update own profile: username, email. Password change is a separate command.
+
+## POST `/api/v1/me/password`
+
+Change own password. Requires the current password.
+
 ## GET `/api/v1/me/tasks`
 
 Get tasks assigned to the current user.
@@ -1832,6 +1983,41 @@ Get projects where the current user is a member.
 ## GET `/api/v1/me/activity`
 
 Get the current user's activity.
+
+---
+
+## GET `/api/v1/users`
+
+User picker for member assignment and mentions.
+
+### Query
+
+```text
+q          optional, min 2 characters
+project_id optional, restricts to members of that project
+page
+page_size
+```
+
+### Response
+
+```json
+{
+  "items": [
+    {
+      "id": 17,
+      "username": "john",
+      "email": "john@example.com"
+    }
+  ],
+  "page": 1,
+  "page_size": 20,
+  "total": 3
+}
+```
+
+Authenticated users only. Global `admin` additionally manages accounts via
+`/api/v1/admin/users` (list, change global role, deactivate).
 
 ---
 
@@ -1963,11 +2149,22 @@ The following cases must be explicitly covered in tests and services.
 - status belongs to another project
 - create task in archived project
 - update task without permission
-- deleting already deleted task
+- deleting already deleted task (second delete returns 404)
 - moving task to inaccessible project
 - invalid task transition
 - self-relation
 - duplicate relation
+- concurrent task creation in one project (number allocation race; see 2.3)
+- concurrent update of one task (stale version; 409 stale_version)
+- reordering against a neighbor that was deleted concurrently
+- deleting a status that still has tasks (409 status_in_use)
+
+## Idempotency
+
+- double submit of a create command returns the same logical result or a
+  clean 409 already_exists; never two rows
+- marking an already read notification read is a no-op, not an error
+- watch/unwatch are idempotent commands
 
 ## Comments
 
@@ -2013,7 +2210,7 @@ COMMIT
 PUBLISH event
 ```
 
-For stronger delivery guarantees, introduce an **Outbox Pattern** later:
+For stronger delivery guarantees, use an **Outbox Pattern**:
 
 ```text
 BEGIN
@@ -2029,7 +2226,11 @@ Redis
 SSE
 ```
 
-The Outbox Pattern should be considered for a production-grade version with reliable event delivery.
+The Outbox Pattern is mandatory before the SSE phase ships. Until then the
+service layer publishes through the `EventPublisher` hook (introduced in
+Phase 0, a no-op implementation first) strictly after commit, so switching to
+outbox delivery means changing the publisher implementation only, not the
+services.
 
 ---
 
@@ -2070,7 +2271,11 @@ User B edits old copy
 User B accidentally overwrites A's changes
 ```
 
-This feature can be introduced after the first CRUD implementation.
+Optimistic concurrency is mandatory since Phase 1 for tasks: `PATCH` and
+`DELETE /tasks/{task_id}` require `If-Match`. Without the header the endpoint
+returns 428 Precondition Required; a wrong value returns 409 stale_version.
+Task mutations increment `version`. Other entities follow the same contract
+later when their edit flows appear.
 
 ---
 
@@ -2093,9 +2298,11 @@ Commands:
 POST /tasks/{id}/transition
 POST /tasks/{id}/assign
 POST /tasks/{id}/unassign
-POST /tasks/{id}/move
+POST /tasks/{id}/reorder
+POST /tasks/{id}/move          (Phase 5)
 POST /tasks/{id}/watch
 POST /tasks/{id}/unwatch
+POST /projects/{id}/transfer-ownership
 ```
 
 This keeps business operations explicit and prevents large `PATCH` endpoints from becoming difficult to maintain.
@@ -2178,10 +2385,17 @@ This keeps business operations explicit and prevents large `PATCH` endpoints fro
 │   └── DELETE /{comment_id}
 │
 ├── notifications
-│   ├── GET    /
-│   ├── GET    /unread
+│   ├── GET    /                 (?read=false returns only unread)
 │   ├── POST   /{notification_id}/read
 │   └── POST   /read-all
+│
+├── users
+│   └── GET    /                 (picker: search, project context, paginated)
+│
+├── admin
+│   ├── GET    /users
+│   ├── PATCH  /users/{user_id}  (is_active, role)
+│   └── DELETE /users/{user_id}
 │
 └── search
     └── GET    /?q=...
@@ -2192,6 +2406,26 @@ This keeps business operations explicit and prevents large `PATCH` endpoints fro
 # 35. Suggested Implementation Order
 
 Implement the backend in this order.
+
+## Phase 0 — Connectors and invariants of the existing app
+
+```text
+CORS: allow PATCH, DELETE, OPTIONS
+is_active checks in login, refresh and access-token handling
+narrow IntegrityError mapping (409 only for unique violations)
+email normalization: lowercase + unique index on lower(email)
+error envelope: {detail, code} with the code registry from section 4
+schemas/common: Paginated[T], page_size cap 100, sort whitelist
+PATCH base with exclude_unset semantics
+RequireProjectRole policy helper
+EventPublisher protocol + no-op implementation (hook for the outbox)
+enums ProjectRole, Priority
+```
+
+Goal: the existing auth app is safe and extended infra is in place before
+domain tables arrive.
+
+---
 
 ## Phase 1 — Foundation
 

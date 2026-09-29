@@ -8,7 +8,7 @@ from app.exceptions import (
     TokenInvalidError,
 )
 from app.services import AuthService, UserService
-from tests.fakes import FakeUserCRUD
+from tests.fakes import FakeUserCRUD, InactiveUserCRUD
 
 
 def test_validate_token_payload_ok():
@@ -277,3 +277,28 @@ async def test_remove_refresh_token_user_missing(
     await service.remove_refresh_token(dummy_session, redis_client, refresh_token)
 
     assert await redis_client.get(f"rft:{jti}") is None
+
+
+async def test_auth_user_inactive_account(test_settings: Settings, dummy_session):
+    service = AuthService(UserService(InactiveUserCRUD()), test_settings)
+    redis_client = FakeRedis()
+
+    with pytest.raises(InvalidCredentials):
+        await service.auth_user(dummy_session, redis_client, "duplicate", "password")
+
+
+async def test_refresh_token_inactive_account(test_settings: Settings, dummy_session):
+    service = AuthService(UserService(InactiveUserCRUD()), test_settings)
+    redis_client = FakeRedis()
+
+    refresh_token, jti = service.jwt_manager.create_token(
+        {"sub": "1", "type": service.REFRESH_TOKEN_TYPE},
+        test_settings.refresh_secret,
+        10,
+    )
+    await redis_client.setex(
+        f"rft:{jti}", test_settings.refresh_token_expire_m * 60, "valid"
+    )
+
+    with pytest.raises(TokenInvalidError):
+        await service.refresh_token(dummy_session, redis_client, refresh_token)

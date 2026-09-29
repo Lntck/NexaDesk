@@ -14,7 +14,7 @@ class User(Base):
     __tablename__ = "users"
 
     username: Mapped[str] = mapped_column(nullable=False)
-    email: Mapped[str] = mapped_column(unique=True, nullable=False)
+    email: Mapped[str] = mapped_column(nullable=False)
 
     password_hash: Mapped[str] = mapped_column(nullable=False)
 
@@ -37,4 +37,7 @@ class User(Base):
         nullable=False,
     )
 
-    __table_args__ = (Index(None, func.lower(username), unique=True),)
+    __table_args__ = (
+        Index(None, func.lower(username), unique=True),
+        Index(None, func.lower(email), unique=True),
+    )
