@@ -1,7 +1,7 @@
 services:
   app:
-    image: ghcr.io/lntck/fastapi-jwt-auth:latest
-    container_name: fastapi-jwt-auth
+    image: ghcr.io/lntck/nexadesk:latest
+    container_name: nexadesk
     restart: unless-stopped
 
     env_file:
@@ -25,7 +25,7 @@ services:
 
   db:
     image: postgres:16-alpine
-    container_name: jwt-auth-db
+    container_name: nexadesk-db
     restart: unless-stopped
 
     environment:
@@ -44,7 +44,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: jwt-auth-redis
+    container_name: nexadesk-redis
     restart: unless-stopped
 
     command:

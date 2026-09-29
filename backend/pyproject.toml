@@ -1,7 +1,7 @@
 [tool.poetry]
-name = "fastapi-jwt-auth"
+name = "nexadesk"
 version = "0.1.0"
-description = "JWT authentication service built with FastAPI, PostgreSQL, and Redis."
+description = "NexaDesk backend API — FastAPI, PostgreSQL, Redis. JWT authentication, RBAC and async stack."
 authors = ["Rushan Shafeev <shafeev.dev@gmail.com>"]
 readme = "README.md"
 package-mode = false

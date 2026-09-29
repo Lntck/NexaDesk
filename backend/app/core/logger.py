@@ -2,7 +2,7 @@ import logging
 
 
 def setup_logger():
-    logger = logging.getLogger("my_app")
+    logger = logging.getLogger("nexadesk")
     logger.setLevel(logging.DEBUG)
 
     ch = logging.StreamHandler()

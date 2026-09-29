@@ -9,7 +9,7 @@ from app.lifespan import lifespan
 settings = get_settings()
 
 app = FastAPI(
-    title="My Auth API",
+    title="NexaDesk API",
     version="1.0.2",
     debug=settings.debug,
     lifespan=lifespan,
