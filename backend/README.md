@@ -6,8 +6,9 @@ PostgreSQL and Redis.
 
 This directory is the backend of the NexaDesk monorepo. The service implements
 the user/auth core and the project/task domain (projects, membership, board
-statuses, tasks, kanban board). Remaining domain APIs (comments, labels,
-watchers, real-time updates) are added as new modules under `app/api/v1/`.
+statuses, tasks, kanban board) together with the collaboration domain (comments,
+labels, watchers, activity history). Real-time updates and notifications are
+added as new modules under `app/api/v1/`.
 
 ## What Is Implemented
 
@@ -40,6 +41,17 @@ watchers, real-time updates) are added as new modules under `app/api/v1/`.
   - Assignment/unassignment to project members
   - Kanban board with per-column ordering (`rank`) and reorder command
   - Optimistic concurrency for task edits via `If-Match`
+- Collaboration domain:
+  - Task comments with soft delete and an immutable audit trail
+  - `@username` mentions parsed on save
+  - Project labels (unique per project, case-insensitive) with colors
+  - Label attachments to tasks inside the same project
+  - Task watchers with idempotent watch/unwatch commands
+  - Task details carrying `labels`, `comments_count` and `watchers_count`
+- Activity history:
+  - Append-only events for project, member, task, comment, label and watcher
+    changes
+  - After-commit domain event publishing hook (outbox-ready)
 
 ## Tech Stack
 
@@ -87,7 +99,7 @@ API (endpoints) -> Services (business logic) -> CRUD (data access) -> Models
 |  |  |- health.py         # Liveness / readiness probes
 |  |  |- v1/
 |  |  |  |- router.py
-|  |  |  |- endpoints/     # auth, users, projects, members, statuses, tasks
+|  |  |  |- endpoints/     # auth, users, projects, members, statuses, tasks, comments, labels, watchers, activity
 |  |- auth/                # Auth dependencies, RBAC permissions, token schema
 |  |- core/                # Config, security, constants, limiter, logger
 |  |- crud/                # Data access layer
@@ -98,7 +110,7 @@ API (endpoints) -> Services (business logic) -> CRUD (data access) -> Models
 |  |- models/              # SQLAlchemy models
 |  |- protocols/           # Typed CRUD protocols for DI
 |  |- schemas/             # Pydantic schemas
-|  |- services/            # Business logic (user, auth, project, status, task)
+|  |- services/            # Business logic (user, auth, project, status, task, comment, label, watcher, activity)
 |  |- utils/               # Helpers (cookie handling)
 |- tests/
 |  |- fakes/
@@ -167,6 +179,22 @@ Auth and user endpoints are under `/api/v1`. Health endpoints are top-level.
 | POST | `/api/v1/tasks/{task_id}/assign` | Project `member` | - | Assign the task to a project member |
 | POST | `/api/v1/tasks/{task_id}/unassign` | Project `member` | - | Remove the assignee |
 | POST | `/api/v1/tasks/{task_id}/reorder` | Project `member` | - | Place a card inside the board and recalculate ranks |
+| GET | `/api/v1/tasks/{task_id}/comments` | Project `viewer` | - | List task comments |
+| POST | `/api/v1/tasks/{task_id}/comments` | Project `member` | - | Create a comment (parses `@mentions`) |
+| PATCH | `/api/v1/comments/{comment_id}` | Author, project/global `admin` | - | Edit a comment |
+| DELETE | `/api/v1/comments/{comment_id}` | Author, project/global `admin` | - | Soft-delete a comment |
+| GET | `/api/v1/projects/{project_id}/labels` | Project `viewer` | - | List project labels |
+| POST | `/api/v1/projects/{project_id}/labels` | Project `admin` | - | Create a label |
+| PATCH | `/api/v1/projects/{project_id}/labels/{label_id}` | Project `admin` | - | Update a label |
+| DELETE | `/api/v1/projects/{project_id}/labels/{label_id}` | Project `admin` | - | Delete a label and detach it from tasks |
+| POST | `/api/v1/tasks/{task_id}/labels/{label_id}` | Project `member` | - | Attach a label to a task |
+| DELETE | `/api/v1/tasks/{task_id}/labels/{label_id}` | Project `member` | - | Remove a label from a task |
+| GET | `/api/v1/tasks/{task_id}/watchers` | Project `viewer` | - | List task watchers |
+| POST | `/api/v1/tasks/{task_id}/watch` | Project `viewer` | - | Watch a task (idempotent) |
+| POST | `/api/v1/tasks/{task_id}/unwatch` | Project `viewer` | - | Stop watching a task (idempotent) |
+| DELETE | `/api/v1/tasks/{task_id}/watchers/{user_id}` | Self or project `admin` | - | Remove a watcher |
+| GET | `/api/v1/projects/{project_id}/activity` | Project `viewer` | - | Project activity history |
+| GET | `/api/v1/tasks/{task_id}/activity` | Project `viewer` | - | Task activity history |
 
 Interactive API docs: Swagger UI at `/docs`, ReDoc at `/redoc`.
 

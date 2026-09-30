@@ -4,17 +4,24 @@ from app.models import User
 from app.schemas import MemberAdd, ProjectCreate
 from app.services import (
     ActivityService,
+    CommentService,
+    LabelService,
     ProjectService,
     TaskService,
     TaskStatusService,
+    WatcherService,
 )
 
 from .activity_crud import FakeActivityCRUD
+from .comment_crud import FakeCommentCRUD
 from .domain import DomainStore
+from .label_crud import FakeLabelCRUD
 from .project_crud import FakeProjectCRUD
 from .project_member_crud import FakeProjectMemberCRUD
 from .task_crud import FakeTaskCRUD
+from .task_label_crud import FakeTaskLabelCRUD
 from .task_status_crud import FakeTaskStatusCRUD
+from .task_watcher_crud import FakeTaskWatcherCRUD
 from .user_crud import StaticUserCRUD
 
 
@@ -55,6 +62,10 @@ class DomainWorld:
         self.member_crud = FakeProjectMemberCRUD(self.store)
         self.status_crud = FakeTaskStatusCRUD(self.store)
         self.task_crud = FakeTaskCRUD(self.store)
+        self.comment_crud = FakeCommentCRUD(self.store)
+        self.label_crud = FakeLabelCRUD(self.store)
+        self.task_label_crud = FakeTaskLabelCRUD(self.store)
+        self.task_watcher_crud = FakeTaskWatcherCRUD(self.store, self.user_crud)
         self.activity_crud = FakeActivityCRUD(self.store)
         self.activity = ActivityLog(self.activity_crud)
         self.project_service = ProjectService(
@@ -72,6 +83,31 @@ class DomainWorld:
             self.project_crud,
             self.member_crud,
             self.status_crud,
+            self.user_crud,
+            self.comment_crud,
+            self.task_label_crud,
+            self.task_watcher_crud,
+            self.activity,
+        )
+        self.comment_service = CommentService(
+            self.comment_crud,
+            self.task_crud,
+            self.member_crud,
+            self.user_crud,
+            self.activity,
+        )
+        self.label_service = LabelService(
+            self.label_crud,
+            self.task_label_crud,
+            self.task_crud,
+            self.project_crud,
+            self.member_crud,
+            self.activity,
+        )
+        self.watcher_service = WatcherService(
+            self.task_watcher_crud,
+            self.task_crud,
+            self.member_crud,
             self.user_crud,
             self.activity,
         )

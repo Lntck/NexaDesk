@@ -21,16 +21,20 @@ from app.exceptions import (
 from app.models import Project, Task, TaskStatus, User
 from app.protocols import (
     ActivityLogProtocol,
+    CommentCRUDProtocol,
     ProjectCRUDProtocol,
     ProjectMemberCRUDProtocol,
     TaskCRUDProtocol,
+    TaskLabelCRUDProtocol,
     TaskStatusCRUDProtocol,
+    TaskWatcherCRUDProtocol,
     UserCRUDProtocol,
 )
 from app.schemas import (
     BoardCard,
     BoardColumn,
     BoardRead,
+    LabelRead,
     PageParams,
     Paginated,
     TaskAssign,
@@ -73,6 +77,9 @@ class TaskService:
         member_crud: ProjectMemberCRUDProtocol,
         status_crud: TaskStatusCRUDProtocol,
         user_crud: UserCRUDProtocol,
+        comment_crud: CommentCRUDProtocol,
+        task_label_crud: TaskLabelCRUDProtocol,
+        watcher_crud: TaskWatcherCRUDProtocol,
         activity: ActivityLogProtocol,
     ):
         """Attach storage implementations.
@@ -83,6 +90,9 @@ class TaskService:
             member_crud: membership storage used for permission checks.
             status_crud: board status storage used for workflow validation.
             user_crud: user storage used to resolve actors and assignees.
+            comment_crud: comment storage used for the comments counter.
+            task_label_crud: label attachment storage used for the label list.
+            watcher_crud: watcher storage used for the watchers counter.
             activity: activity history recorder.
         """
         self.task_crud = task_crud
@@ -90,6 +100,9 @@ class TaskService:
         self.member_crud = member_crud
         self.status_crud = status_crud
         self.user_crud = user_crud
+        self.comment_crud = comment_crud
+        self.task_label_crud = task_label_crud
+        self.watcher_crud = watcher_crud
         self.activity = activity
 
     async def create_task(
@@ -251,7 +264,14 @@ class TaskService:
                 member of its project.
         """
         task, _ = await self._load_task(session, task_id, actor_id)
-        return TaskRead.model_validate(task)
+        read = TaskRead.model_validate(task)
+        read.comments_count = await self.comment_crud.count_for_task(session, task.id)
+        read.labels = [
+            LabelRead.model_validate(relation.label)
+            for relation in await self.task_label_crud.list_for_task(session, task.id)
+        ]
+        read.watchers_count = await self.watcher_crud.count_for_task(session, task.id)
+        return read
 
     async def update_task(
         self,

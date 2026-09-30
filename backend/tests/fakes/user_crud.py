@@ -124,3 +124,18 @@ class StaticUserCRUD:
             User | None: the preset user or None.
         """
         return self.users.get(user_id)
+
+    async def get_by_username(self, session, username):
+        """Return the user with the given username.
+
+        Args:
+            session: unused session placeholder.
+            username: username to search for.
+
+        Returns:
+            User | None: the preset user or None.
+        """
+        for user in self.users.values():
+            if user.username == username:
+                return user
+        return None

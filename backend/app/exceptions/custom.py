@@ -142,6 +142,22 @@ class ArchivedCollection(AppException):
     code = "archived_collection"
 
 
+class CommentNotFound(AppException):
+    """Raised when a comment does not exist or was soft-deleted."""
+
+    status_code = 404
+    detail = "Comment not found"
+    code = "comment_not_found"
+
+
+class LabelNotFound(AppException):
+    """Raised when a label does not exist in the given project."""
+
+    status_code = 404
+    detail = "Label not found"
+    code = "label_not_found"
+
+
 class PayloadError(AppException):
     """Raised when ids or relations in a payload are semantically invalid."""
 
