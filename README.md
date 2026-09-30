@@ -20,8 +20,8 @@ API, configuration, development workflow). The API contract is described in
 
 ## Current Status
 
-The backend foundation and the project/task domain are implemented and run via
-Docker Compose:
+The backend foundation, the project/task domain and the collaboration features
+are implemented and run via Docker Compose:
 
 - JWT authentication (access/refresh tokens with rotation and revocation)
 - Role-Based Access Control (hierarchical `user` < `admin` roles)
@@ -31,6 +31,10 @@ Docker Compose:
 - Tasks with project-scoped keys, priorities, assignment, parent tasks
 - Kanban board with per-column ordering and one-step status transitions
 - Optimistic concurrency for task edits (`If-Match`)
+- Task comments with `@username` mentions and soft delete
+- Project labels and task labels
+- Task watchers with idempotent watch/unwatch
+- Activity history with after-commit event publishing
 - Async SQLAlchemy 2.0 + PostgreSQL, Redis
 - Health probes, rate limiting, centralized exception handling
 
@@ -71,7 +75,8 @@ and the API reference, see [backend/README.md](backend/README.md).
 - [x] Backend core: auth, users, RBAC, async stack
 - [x] Projects and project membership
 - [x] Tasks and kanban board
-- [ ] Comments, labels, watchers
-- [ ] Activity and notifications
+- [x] Comments, labels, watchers
+- [x] Activity history
+- [ ] Notifications
 - [ ] Real-time updates
 - [ ] Web client (`frontend/`)

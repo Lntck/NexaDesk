@@ -274,6 +274,7 @@ task_not_found               404   also returned to non-members
 status_not_found             404   task status of a project
 user_not_found               404
 comment_not_found            404
+label_not_found              404
 already_exists               409   duplicate key, label attach, etc.
 invalid_transition           409   status change not allowed
 stale_version                409   If-Match mismatch (see section 32)

@@ -1,0 +1,30 @@
+from enum import StrEnum
+
+
+class ActivityEventType(StrEnum):
+    """Type key of an immutable activity history entry."""
+
+    PROJECT_CREATED = "project.created"
+    PROJECT_UPDATED = "project.updated"
+    PROJECT_ARCHIVED = "project.archived"
+    PROJECT_RESTORED = "project.restored"
+    MEMBER_ADDED = "member.added"
+    MEMBER_REMOVED = "member.removed"
+    MEMBER_ROLE_CHANGED = "member.role_changed"
+    TASK_CREATED = "task.created"
+    TASK_UPDATED = "task.updated"
+    TASK_DELETED = "task.deleted"
+    TASK_ASSIGNED = "task.assigned"
+    TASK_UNASSIGNED = "task.unassigned"
+    TASK_STATUS_CHANGED = "task.status_changed"
+    TASK_MOVED = "task.moved"
+    RELATION_ADDED = "relation.added"
+    RELATION_REMOVED = "relation.removed"
+    WATCHER_ADDED = "watcher.added"
+    WATCHER_REMOVED = "watcher.removed"
+    COMMENT_CREATED = "comment.created"
+    COMMENT_UPDATED = "comment.updated"
+    COMMENT_DELETED = "comment.deleted"
+    COMMENT_MENTIONED = "comment.mentioned"
+    LABEL_ADDED = "label.added"
+    LABEL_REMOVED = "label.removed"

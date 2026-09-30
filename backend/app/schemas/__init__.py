@@ -1,3 +1,5 @@
+from .activity import ActivityEventRead
+from .comment import CommentCreate, CommentPatch, CommentRead
 from .common import (
     MAX_PAGE_SIZE,
     PageParams,
@@ -5,6 +7,7 @@ from .common import (
     PatchSchema,
     check_sort,
 )
+from .label import LabelCreate, LabelPatch, LabelRead
 from .member import MemberAdd, MemberList, MemberRead, MemberRolePatch
 from .project import (
     OwnershipTransfer,
@@ -32,13 +35,21 @@ from .task import (
 )
 from .task_status import TaskStatusCreate, TaskStatusPatch, TaskStatusRead
 from .user import Token, UserBrief, UserRead, UserRegister
+from .watcher import WatcherRead
 
 __all__ = (
+    "ActivityEventRead",
+    "CommentCreate",
+    "CommentPatch",
+    "CommentRead",
     "MAX_PAGE_SIZE",
     "PageParams",
     "Paginated",
     "PatchSchema",
     "check_sort",
+    "LabelCreate",
+    "LabelPatch",
+    "LabelRead",
     "MemberAdd",
     "MemberList",
     "MemberRead",
@@ -70,4 +81,5 @@ __all__ = (
     "UserBrief",
     "UserRead",
     "UserRegister",
+    "WatcherRead",
 )

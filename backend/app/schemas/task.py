@@ -2,12 +2,12 @@ from __future__ import annotations
 
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.enums import Priority
 from app.schemas.common import PatchSchema
+from app.schemas.label import LabelRead
 from app.schemas.task_status import TaskStatusRead
 from app.schemas.user import UserBrief
 
@@ -85,7 +85,7 @@ class TaskRead(BaseModel):
     priority: Priority
     creator: UserBrief
     assignee: UserBrief | None = None
-    labels: list[Any] = Field(default_factory=list)
+    labels: list[LabelRead] = Field(default_factory=list)
     comments_count: int = 0
     watchers_count: int = 0
     parent_task_id: int | None = None
