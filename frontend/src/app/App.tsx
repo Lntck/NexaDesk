@@ -1,4 +1,4 @@
-/** Application router with auth guards and the main layout. */
+/** Application router with auth guards and the public home page. */
 
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { BrowserRouter } from 'react-router-dom';
@@ -6,6 +6,7 @@ import { useSession, useSessionBootstrap, useUnauthorizedHandler } from '@/entit
 import { CenteredSpinner } from '@/shared/ui';
 import { AppLayout } from './layout/AppLayout';
 import { AuthLayout } from './layout/AuthLayout';
+import { HomePage } from '@/pages/HomePage';
 import { LoginPage } from '@/pages/LoginPage';
 import { RegisterPage } from '@/pages/RegisterPage';
 import { ProjectsPage } from '@/pages/ProjectsPage';
@@ -20,7 +21,7 @@ import { ProfilePage } from '@/pages/ProfilePage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 
 /**
- * Render the router with protected application routes.
+ * Render the router with the public home page and protected application routes.
  *
  * Also bootstraps the session so a reload on a protected route restores
  * the current user from the refresh cookie.
@@ -34,6 +35,7 @@ export function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/" element={<HomePage />} />
         <Route element={<AuthLayout />}>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
@@ -45,7 +47,6 @@ export function App() {
             </RequireAuth>
           }
         >
-          <Route path="/" element={<Navigate to="/projects" replace />} />
           <Route path="/projects" element={<ProjectsPage />} />
           <Route path="/projects/:projectId/board" element={<BoardPage />} />
           <Route path="/projects/:projectId/tasks" element={<TasksPage />} />
