@@ -1,3 +1,4 @@
+from .activity import router as activity_router
 from .auth import router as auth_router
 from .members import router as members_router
 from .projects import router as projects_router
@@ -6,6 +7,7 @@ from .tasks import router as tasks_router
 from .users import router as users_router
 
 __all__ = (
+    "activity_router",
     "auth_router",
     "members_router",
     "projects_router",

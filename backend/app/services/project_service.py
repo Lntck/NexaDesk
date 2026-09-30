@@ -4,7 +4,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.roles import load_role, resolve_role
-from app.enums import ProjectRole
+from app.enums import ActivityEventType, ProjectRole
 from app.exceptions import (
     AccessDenied,
     AlreadyExists,
@@ -16,6 +16,7 @@ from app.exceptions import (
 from app.models import Project, ProjectMember, TaskStatus
 from app.models.task_status import DEFAULT_TASK_STATUSES
 from app.protocols import (
+    ActivityLogProtocol,
     ProjectCRUDProtocol,
     ProjectMemberCRUDProtocol,
     TaskStatusCRUDProtocol,
@@ -52,6 +53,7 @@ class ProjectService:
         member_crud: ProjectMemberCRUDProtocol,
         status_crud: TaskStatusCRUDProtocol,
         user_crud: UserCRUDProtocol,
+        activity: ActivityLogProtocol,
     ):
         """Attach storage implementations.
 
@@ -60,11 +62,13 @@ class ProjectService:
             member_crud: membership row storage.
             status_crud: board status storage used for default columns.
             user_crud: user storage used to validate new members.
+            activity: activity history recorder.
         """
         self.project_crud = project_crud
         self.member_crud = member_crud
         self.status_crud = status_crud
         self.user_crud = user_crud
+        self.activity = activity
 
     async def create_project(
         self, session: AsyncSession, actor_id: int, data: ProjectCreate
@@ -126,6 +130,13 @@ class ProjectService:
                     position=position,
                 ),
             )
+        await self.activity.record(
+            session,
+            ActivityEventType.PROJECT_CREATED,
+            actor_id,
+            project_id=project.id,
+            data={"key": project.key, "name": project.name},
+        )
         return ProjectCreated.model_validate(project)
 
     async def list_projects(
@@ -240,6 +251,15 @@ class ProjectService:
         if "description" in changes:
             project.description = changes["description"]
 
+        if changes:
+            await self.activity.record(
+                session,
+                ActivityEventType.PROJECT_UPDATED,
+                actor_id,
+                project_id=project.id,
+                data={"fields": sorted(changes)},
+            )
+
         project.updated_at = utcnow()
         await self.project_crud.update(session, project)
         return await self._read(session, project)
@@ -271,6 +291,12 @@ class ProjectService:
             project.is_archived = True
             project.updated_at = utcnow()
             await self.project_crud.update(session, project)
+            await self.activity.record(
+                session,
+                ActivityEventType.PROJECT_ARCHIVED,
+                actor_id,
+                project_id=project.id,
+            )
         return await self._read(session, project)
 
     async def restore_project(
@@ -300,6 +326,12 @@ class ProjectService:
             project.is_archived = False
             project.updated_at = utcnow()
             await self.project_crud.update(session, project)
+            await self.activity.record(
+                session,
+                ActivityEventType.PROJECT_RESTORED,
+                actor_id,
+                project_id=project.id,
+            )
         return await self._read(session, project)
 
     async def transfer_ownership(
@@ -342,6 +374,7 @@ class ProjectService:
             raise UserNotFound("User is not a project member")
 
         previous = await self.member_crud.get_member(session, project_id, actor_id)
+        previous_target_role = target.role
         if previous is not None:
             await self.member_crud.update_role(session, previous, ProjectRole.ADMIN)
         await self.member_crud.update_role(session, target, ProjectRole.OWNER)
@@ -350,6 +383,24 @@ class ProjectService:
         project.owner = target.user
         project.updated_at = utcnow()
         await self.project_crud.update(session, project)
+        await self.activity.record(
+            session,
+            ActivityEventType.MEMBER_ROLE_CHANGED,
+            actor_id,
+            project_id=project.id,
+            data={"user_id": actor_id, "from": "owner", "to": "admin"},
+        )
+        await self.activity.record(
+            session,
+            ActivityEventType.MEMBER_ROLE_CHANGED,
+            actor_id,
+            project_id=project.id,
+            data={
+                "user_id": data.user_id,
+                "from": previous_target_role.value,
+                "to": "owner",
+            },
+        )
         return await self._read(session, project)
 
     async def list_members(
@@ -417,6 +468,13 @@ class ProjectService:
             ),
         )
         member.user = user
+        await self.activity.record(
+            session,
+            ActivityEventType.MEMBER_ADDED,
+            actor_id,
+            project_id=project_id,
+            data={"user_id": data.user_id, "role": data.role.value},
+        )
         return MemberRead.model_validate(member)
 
     async def change_member_role(
@@ -453,7 +511,19 @@ class ProjectService:
         member = await self._get_member(session, project_id, user_id)
         self._ensure_manageable(caller_role, actor_id, member)
 
+        previous_role = member.role
         await self.member_crud.update_role(session, member, data.role)
+        await self.activity.record(
+            session,
+            ActivityEventType.MEMBER_ROLE_CHANGED,
+            actor_id,
+            project_id=project_id,
+            data={
+                "user_id": user_id,
+                "from": previous_role.value,
+                "to": data.role.value,
+            },
+        )
         return MemberRead.model_validate(member)
 
     async def remove_member(
@@ -482,6 +552,13 @@ class ProjectService:
         self._ensure_manageable(caller_role, actor_id, member)
 
         await self.member_crud.remove_member(session, member)
+        await self.activity.record(
+            session,
+            ActivityEventType.MEMBER_REMOVED,
+            actor_id,
+            project_id=project_id,
+            data={"user_id": user_id, "role": member.role.value},
+        )
 
     async def _get_project(self, session: AsyncSession, project_id: int) -> Project:
         """Load a project row.

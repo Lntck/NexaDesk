@@ -1,3 +1,4 @@
+from .activity import ActivityEventRead
 from .common import (
     MAX_PAGE_SIZE,
     PageParams,
@@ -34,6 +35,7 @@ from .task_status import TaskStatusCreate, TaskStatusPatch, TaskStatusRead
 from .user import Token, UserBrief, UserRead, UserRegister
 
 __all__ = (
+    "ActivityEventRead",
     "MAX_PAGE_SIZE",
     "PageParams",
     "Paginated",

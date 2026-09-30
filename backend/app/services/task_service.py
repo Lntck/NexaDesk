@@ -6,7 +6,7 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.roles import load_role, resolve_role
-from app.enums import Priority, ProjectRole
+from app.enums import ActivityEventType, Priority, ProjectRole
 from app.exceptions import (
     AccessDenied,
     ArchivedCollection,
@@ -20,6 +20,7 @@ from app.exceptions import (
 )
 from app.models import Project, Task, TaskStatus, User
 from app.protocols import (
+    ActivityLogProtocol,
     ProjectCRUDProtocol,
     ProjectMemberCRUDProtocol,
     TaskCRUDProtocol,
@@ -72,6 +73,7 @@ class TaskService:
         member_crud: ProjectMemberCRUDProtocol,
         status_crud: TaskStatusCRUDProtocol,
         user_crud: UserCRUDProtocol,
+        activity: ActivityLogProtocol,
     ):
         """Attach storage implementations.
 
@@ -81,12 +83,14 @@ class TaskService:
             member_crud: membership storage used for permission checks.
             status_crud: board status storage used for workflow validation.
             user_crud: user storage used to resolve actors and assignees.
+            activity: activity history recorder.
         """
         self.task_crud = task_crud
         self.project_crud = project_crud
         self.member_crud = member_crud
         self.status_crud = status_crud
         self.user_crud = user_crud
+        self.activity = activity
 
     async def create_task(
         self,
@@ -158,6 +162,14 @@ class TaskService:
         task.creator = await self._get_user(session, actor_id)
         task.assignee = assignee
         await self.task_crud.create_task(session, task)
+        await self.activity.record(
+            session,
+            ActivityEventType.TASK_CREATED,
+            actor_id,
+            project_id=project_id,
+            task_id=task.id,
+            data={"key": task.key, "title": task.title},
+        )
         return TaskRead.model_validate(task)
 
     async def list_tasks(
@@ -303,6 +315,14 @@ class TaskService:
         task.version += 1
         task.updated_at = utcnow()
         await self.task_crud.update(session, task)
+        await self.activity.record(
+            session,
+            ActivityEventType.TASK_UPDATED,
+            actor_id,
+            project_id=task.project_id,
+            task_id=task.id,
+            data={"key": task.key, "fields": sorted(changes)},
+        )
         return TaskRead.model_validate(task)
 
     async def delete_task(
@@ -335,6 +355,14 @@ class TaskService:
         task.version += 1
         task.updated_at = utcnow()
         await self.task_crud.update(session, task)
+        await self.activity.record(
+            session,
+            ActivityEventType.TASK_DELETED,
+            actor_id,
+            project_id=task.project_id,
+            task_id=task.id,
+            data={"key": task.key},
+        )
 
     async def transition(
         self,
@@ -369,12 +397,21 @@ class TaskService:
         target = await self._get_target_status(session, task, data.status_id)
         self._ensure_adjacent(task, target)
 
+        previous_key = task.status.key
         task.status_id = target.id
         task.status = target
         task.rank = await self.task_crud.next_rank(session, task.project_id, target.id)
         task.version += 1
         task.updated_at = utcnow()
         await self.task_crud.update(session, task)
+        await self.activity.record(
+            session,
+            ActivityEventType.TASK_STATUS_CHANGED,
+            actor_id,
+            project_id=task.project_id,
+            task_id=task.id,
+            data={"key": task.key, "from": previous_key, "to": target.key},
+        )
 
         return TaskTransitionRead(
             id=task.id,
@@ -421,6 +458,14 @@ class TaskService:
         task.version += 1
         task.updated_at = utcnow()
         await self.task_crud.update(session, task)
+        await self.activity.record(
+            session,
+            ActivityEventType.TASK_ASSIGNED,
+            actor_id,
+            project_id=task.project_id,
+            task_id=task.id,
+            data={"key": task.key, "user_id": data.user_id},
+        )
 
         return self._assign_read(task)
 
@@ -447,11 +492,20 @@ class TaskService:
         resolve_role(role, ProjectRole.MEMBER)
         self._ensure_writable(task)
 
+        previous_assignee_id = task.assignee_id
         task.assignee_id = None
         task.assignee = None
         task.version += 1
         task.updated_at = utcnow()
         await self.task_crud.update(session, task)
+        await self.activity.record(
+            session,
+            ActivityEventType.TASK_UNASSIGNED,
+            actor_id,
+            project_id=task.project_id,
+            task_id=task.id,
+            data={"key": task.key, "user_id": previous_assignee_id},
+        )
 
         return self._assign_read(task)
 
@@ -519,6 +573,20 @@ class TaskService:
             await self.task_crud.renumber_column(
                 session, task.project_id, previous_status_id
             )
+
+        await self.activity.record(
+            session,
+            ActivityEventType.TASK_MOVED,
+            actor_id,
+            project_id=task.project_id,
+            task_id=task.id,
+            data={
+                "key": task.key,
+                "status_id": target.id,
+                "rank": task.rank,
+                "from_status_id": previous_status_id,
+            },
+        )
 
         return TaskPositionRead(
             id=task.id,

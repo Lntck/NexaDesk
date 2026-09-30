@@ -1,8 +1,15 @@
 from app.enums import ProjectRole
+from app.events import ActivityLog
 from app.models import User
 from app.schemas import MemberAdd, ProjectCreate
-from app.services import ProjectService, TaskService, TaskStatusService
+from app.services import (
+    ActivityService,
+    ProjectService,
+    TaskService,
+    TaskStatusService,
+)
 
+from .activity_crud import FakeActivityCRUD
 from .domain import DomainStore
 from .project_crud import FakeProjectCRUD
 from .project_member_crud import FakeProjectMemberCRUD
@@ -48,8 +55,14 @@ class DomainWorld:
         self.member_crud = FakeProjectMemberCRUD(self.store)
         self.status_crud = FakeTaskStatusCRUD(self.store)
         self.task_crud = FakeTaskCRUD(self.store)
+        self.activity_crud = FakeActivityCRUD(self.store)
+        self.activity = ActivityLog(self.activity_crud)
         self.project_service = ProjectService(
-            self.project_crud, self.member_crud, self.status_crud, self.user_crud
+            self.project_crud,
+            self.member_crud,
+            self.status_crud,
+            self.user_crud,
+            self.activity,
         )
         self.status_service = TaskStatusService(
             self.status_crud, self.task_crud, self.project_crud, self.member_crud
@@ -60,6 +73,10 @@ class DomainWorld:
             self.member_crud,
             self.status_crud,
             self.user_crud,
+            self.activity,
+        )
+        self.activity_service = ActivityService(
+            self.activity_crud, self.member_crud, self.task_crud
         )
 
     @property

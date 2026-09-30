@@ -1,3 +1,4 @@
+from .activity_crud import FakeActivityCRUD
 from .domain import DomainStore
 from .project_crud import FakeProjectCRUD
 from .project_member_crud import FakeProjectMemberCRUD
@@ -7,6 +8,7 @@ from .user_crud import FakeUserCRUD, InactiveUserCRUD, StaticUserCRUD
 
 __all__ = (
     "DomainStore",
+    "FakeActivityCRUD",
     "FakeProjectCRUD",
     "FakeProjectMemberCRUD",
     "FakeTaskCRUD",

@@ -1,3 +1,4 @@
+from .activity_event import ActivityEvent
 from .base import Base
 from .project import Project
 from .project_member import ProjectMember
@@ -6,6 +7,7 @@ from .task_status import TaskStatus
 from .user import User
 
 __all__ = (
+    "ActivityEvent",
     "Base",
     "Project",
     "ProjectMember",

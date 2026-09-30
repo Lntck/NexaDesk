@@ -1,4 +1,5 @@
 from .crud import (
+    get_activity_crud,
     get_member_crud,
     get_project_crud,
     get_status_crud,
@@ -10,6 +11,8 @@ from .events import get_event_publisher
 from .if_match import get_if_match_version
 from .redis import get_redis_client
 from .services import (
+    get_activity_log,
+    get_activity_service,
     get_auth_service,
     get_project_service,
     get_status_service,
@@ -18,6 +21,9 @@ from .services import (
 )
 
 __all__ = (
+    "get_activity_crud",
+    "get_activity_log",
+    "get_activity_service",
     "get_db_session",
     "get_redis_client",
     "get_auth_service",

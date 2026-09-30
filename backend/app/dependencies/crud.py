@@ -1,4 +1,20 @@
-from app.crud import ProjectCRUD, ProjectMemberCRUD, TaskCRUD, TaskStatusCRUD, UserCRUD
+from app.crud import (
+    ActivityCRUD,
+    ProjectCRUD,
+    ProjectMemberCRUD,
+    TaskCRUD,
+    TaskStatusCRUD,
+    UserCRUD,
+)
+
+
+async def get_activity_crud() -> ActivityCRUD:
+    """Return the activity history storage.
+
+    Returns:
+        ActivityCRUD: activity history row data access.
+    """
+    return ActivityCRUD()
 
 
 async def get_user_crud() -> UserCRUD:
