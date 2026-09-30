@@ -75,3 +75,76 @@ class AccessDenied(AppException):
     status_code = 403
     detail = "Access Denied"
     code = "forbidden"
+
+
+class AlreadyExists(AppException):
+    """Raised when a new row would violate a uniqueness invariant."""
+
+    status_code = 409
+    detail = "Resource already exists"
+    code = "already_exists"
+
+
+# Domain Exceptions
+class TaskNotFound(AppException):
+    """Raised when a task does not exist or the caller is not its project member."""
+
+    status_code = 404
+    detail = "Task not found"
+    code = "task_not_found"
+
+
+class TaskStatusNotFound(AppException):
+    """Raised when a board status does not exist in the given project."""
+
+    status_code = 404
+    detail = "Task status not found"
+    code = "status_not_found"
+
+
+class InvalidTransition(AppException):
+    """Raised when a task status change violates the transition matrix."""
+
+    status_code = 409
+    detail = "Task cannot transition to the requested status"
+    code = "invalid_transition"
+
+
+class StaleVersion(AppException):
+    """Raised when an If-Match version does not match the current task version."""
+
+    status_code = 409
+    detail = "Task has been modified concurrently"
+    code = "stale_version"
+
+
+class PreconditionRequired(AppException):
+    """Raised when a mutation is missing its If-Match precondition."""
+
+    status_code = 428
+    detail = "If-Match header with the task version is required"
+    code = "precondition_required"
+
+
+class StatusInUse(AppException):
+    """Raised when a status holding tasks is being deleted."""
+
+    status_code = 409
+    detail = "Status still has tasks"
+    code = "status_in_use"
+
+
+class ArchivedCollection(AppException):
+    """Raised when a write operation targets an archived project."""
+
+    status_code = 409
+    detail = "Project is archived"
+    code = "archived_collection"
+
+
+class PayloadError(AppException):
+    """Raised when ids or relations in a payload are semantically invalid."""
+
+    status_code = 422
+    detail = "Payload validation error"
+    code = "payload_error"
