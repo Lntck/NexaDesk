@@ -101,6 +101,28 @@ class FakeActivityCRUD:
             [event for event in self.store.events.values() if event.task_id == task_id]
         )
 
+    async def list_events_after(
+        self, session, project_id: int, after_id: str, limit: int
+    ) -> list[ActivityEvent]:
+        """Return project history entries newer than one event id.
+
+        Args:
+            session: unused session placeholder.
+            project_id: project to inspect.
+            after_id: exclusive lower bound, the last id the client saw.
+            limit: maximum number of rows to return.
+
+        Returns:
+            list[ActivityEvent]: history entries ordered oldest first.
+        """
+        events = [
+            event
+            for event in self.store.events.values()
+            if event.project_id == project_id and event.id > after_id
+        ]
+        events.sort(key=lambda event: event.id)
+        return events[:limit]
+
     @staticmethod
     def _sorted(events: list[ActivityEvent]) -> list[ActivityEvent]:
         """Order history entries newest first.

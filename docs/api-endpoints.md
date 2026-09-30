@@ -1845,8 +1845,8 @@ Replay is based on `ActivityEvent` rows (section 19): on reconnect the client
 sends the last seen event ID (`Last-Event-ID` header), and the backend finds
 the stored `ActivityEvent.id` and streams everything after it. Redis Pub/Sub
 alone cannot replay; it only distributes live events, so persistence in
-`activity_events` is a hard precondition for this endpoint (the EventPublisher
-hook in section 31 must be wired to the outbox before SSE reaches production).
+`activity_events` is a hard precondition for this endpoint: the activity
+history is also the source of truth for delivery and replay (section 31).
 
 Heartbeat example:
 
@@ -2216,27 +2216,31 @@ COMMIT
 PUBLISH event
 ```
 
-For stronger delivery guarantees, use an **Outbox Pattern**:
+The `activity_events` table plays the outbox role: the history row is created
+in the same transaction as the domain change, so an event can never be lost.
+The service layer publishes through the `EventPublisher` hook (introduced in
+Phase 0) strictly after commit. A separate outbox table is not required.
+
+Live delivery through Redis Pub/Sub is at-most-once. A crash between commit
+and publish costs connected clients nothing in a single-process deployment
+(their streams die with the process and reconnect with replay) and is
+compensated by replay in multi-worker deployments. For stricter live
+delivery, add a background sweeper that re-publishes activity rows after the
+last delivered id instead of adding a second table:
 
 ```text
 BEGIN
   update task
   create activity
-  create outbox event
 COMMIT
 
-background publisher
+background sweeper
+  read activity_events after last delivered id
   ↓
 Redis
   ↓
 SSE
 ```
-
-The Outbox Pattern is mandatory before the SSE phase ships. Until then the
-service layer publishes through the `EventPublisher` hook (introduced in
-Phase 0, a no-op implementation first) strictly after commit, so switching to
-outbox delivery means changing the publisher implementation only, not the
-services.
 
 ---
 
@@ -2424,7 +2428,7 @@ error envelope: {detail, code} with the code registry from section 4
 schemas/common: Paginated[T], page_size cap 100, sort whitelist
 PATCH base with exclude_unset semantics
 RequireProjectRole policy helper
-EventPublisher protocol + no-op implementation (hook for the outbox)
+EventPublisher protocol + no-op implementation (hook for event delivery)
 enums ProjectRole, Priority
 ```
 
@@ -2495,6 +2499,7 @@ Redis event publisher
 SSE endpoint
 event schemas
 connection management
+activity_events as the delivery source of truth
 ```
 
 Goal:
@@ -2537,7 +2542,7 @@ Search
 advanced filters
 bulk operations
 optimistic concurrency
-Outbox Pattern
+outbox sweeper for multi-worker delivery
 ```
 
 Possible future features:

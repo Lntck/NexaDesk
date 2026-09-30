@@ -20,6 +20,10 @@ class Settings(BaseSettings):
     refresh_token_expire_m: int = 43200  # 30 days
     cookie_secure: bool = True
     cookie_samesite: Literal["lax", "strict", "none"] = "strict"
+    sse_heartbeat_s: float = 15  # keep-alive comment interval
+    sse_idle_timeout_s: float = 300  # retire streams silent for 5 minutes
+    sse_max_queued_events: int = 10000  # per-stream queue bound
+    sse_replay_limit: int = 500  # max replayed events per reconnect
 
     @field_validator("database_url")
     @classmethod

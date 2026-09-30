@@ -11,7 +11,7 @@ from .crud import (
     get_user_crud,
 )
 from .database import get_db_session
-from .events import get_event_publisher
+from .events import get_connection_manager, get_event_publisher
 from .if_match import get_if_match_version
 from .redis import get_redis_client
 from .services import (
@@ -34,6 +34,7 @@ __all__ = (
     "get_auth_service",
     "get_comment_crud",
     "get_comment_service",
+    "get_connection_manager",
     "get_db_session",
     "get_event_publisher",
     "get_if_match_version",

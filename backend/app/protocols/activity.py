@@ -79,6 +79,22 @@ class ActivityCRUDProtocol(Protocol):
         """
         ...
 
+    async def list_events_after(
+        self, session: AsyncSession, project_id: int, after_id: str, limit: int
+    ) -> Sequence[ActivityEvent]:
+        """Return project history entries newer than one event id.
+
+        Args:
+            session: active database session.
+            project_id: project to inspect.
+            after_id: exclusive lower bound, the last id the client saw.
+            limit: maximum number of rows to return.
+
+        Returns:
+            Sequence[ActivityEvent]: history entries ordered oldest first.
+        """
+        ...
+
 
 class ActivityLogProtocol(Protocol):
     """Recording seam for the immutable activity history."""
