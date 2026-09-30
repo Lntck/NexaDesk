@@ -2,6 +2,7 @@ from app.crud import (
     ActivityCRUD,
     CommentCRUD,
     LabelCRUD,
+    NotificationCRUD,
     ProjectCRUD,
     ProjectMemberCRUD,
     TaskCRUD,
@@ -100,3 +101,12 @@ async def get_task_watcher_crud() -> TaskWatcherCRUD:
         TaskWatcherCRUD: task watcher subscription row data access.
     """
     return TaskWatcherCRUD()
+
+
+async def get_notification_crud() -> NotificationCRUD:
+    """Return the notification storage.
+
+    Returns:
+        NotificationCRUD: user notification row data access.
+    """
+    return NotificationCRUD()
