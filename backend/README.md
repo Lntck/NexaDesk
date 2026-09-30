@@ -52,6 +52,12 @@ added as new modules under `app/api/v1/`.
   - Append-only events for project, member, task, comment, label and watcher
     changes
   - After-commit domain event publishing hook (outbox-ready)
+- Realtime updates:
+  - After-commit domain event publishing to Redis Pub/Sub
+  - Per-project SSE stream with `Last-Event-ID` replay from the activity
+    history
+  - Heartbeat comments, idle stream retirement, bounded per-client queues
+  - One stream per client per project enforced by the connection registry
 
 ## Tech Stack
 
@@ -60,6 +66,7 @@ added as new modules under `app/api/v1/`.
 - SQLAlchemy (async)
 - PostgreSQL (asyncpg)
 - Redis
+- sse-starlette (SSE)
 - Alembic
 - PyJWT
 - Passlib (argon2)
@@ -82,6 +89,9 @@ API (endpoints) -> Services (business logic) -> CRUD (data access) -> Models
   (`app/protocols/user.py`), which keeps them decoupled and easy to test.
 - **CRUD** performs data access only; transaction commit/rollback is centralized
   in the database session dependency.
+- **Realtime**: domain events are queued on the session during the transaction,
+  published to Redis Pub/Sub strictly after commit and distributed to the
+  project SSE streams.
 - **Infrastructure** (database engine, Redis client) is created once on startup
   in `app/lifespan.py`, stored on `app.state`, and accessed through dependencies.
 
@@ -99,13 +109,14 @@ API (endpoints) -> Services (business logic) -> CRUD (data access) -> Models
 |  |  |- health.py         # Liveness / readiness probes
 |  |  |- v1/
 |  |  |  |- router.py
-|  |  |  |- endpoints/     # auth, users, projects, members, statuses, tasks, comments, labels, watchers, activity
+|  |  |  |- endpoints/     # auth, users, projects, members, statuses, tasks, comments, labels, watchers, activity, events
 |  |- auth/                # Auth dependencies, RBAC permissions, token schema
 |  |- core/                # Config, security, constants, limiter, logger
 |  |- crud/                # Data access layer
 |  |- db/                  # DatabaseClient (postgres), RedisClient
 |  |- dependencies/        # DI: db session, redis, crud, services
 |  |- enums/               # Role, ProjectRole, Priority enums with levels
+|  |- events/              # Domain event hook, Redis publisher, SSE streams
 |  |- exceptions/          # Custom exceptions + handlers
 |  |- models/              # SQLAlchemy models
 |  |- protocols/           # Typed CRUD protocols for DI
@@ -195,14 +206,47 @@ Auth and user endpoints are under `/api/v1`. Health endpoints are top-level.
 | DELETE | `/api/v1/tasks/{task_id}/watchers/{user_id}` | Self or project `admin` | - | Remove a watcher |
 | GET | `/api/v1/projects/{project_id}/activity` | Project `viewer` | - | Project activity history |
 | GET | `/api/v1/tasks/{task_id}/activity` | Project `viewer` | - | Task activity history |
+| GET | `/api/v1/projects/{project_id}/events` | Project `viewer` | - | Project realtime event stream (SSE) |
 
 Interactive API docs: Swagger UI at `/docs`, ReDoc at `/redoc`.
-
 The full contract with request/response examples lives in
 [`docs/api-endpoints.md`](../docs/api-endpoints.md). Project role checks:
 `viewer` and above can read, `member` and above can work with tasks, `admin`
 and above manage the project, statuses and members, `owner` transfers
 ownership. Users outside the project receive `404` instead of `403`.
+
+## Realtime Stream
+
+`GET /api/v1/projects/{project_id}/events` streams project changes over SSE.
+Authentication uses the `Authorization: Bearer` header only: tokens in query
+strings are forbidden, and browser clients open the stream with `fetch`
+instead of `EventSource`.
+
+Every frame carries the event envelope from
+[`docs/api-endpoints.md`](../docs/api-endpoints.md), section 21:
+
+```text
+event: task.status_changed
+id: 01928b7e-...
+data: {"id":"...","type":"task.status_changed","project_id":42,...}
+```
+
+Behavior:
+
+- On reconnect the client sends `Last-Event-ID` and receives the events it
+  missed, replayed from the activity history (`activity_events`).
+- Heartbeat comments are sent every 15 seconds so proxies keep the stream.
+- Streams are retired after 5 minutes without progress or 10000 queued
+  events; the client reconnects and replays.
+- One stream per client per project: a second connect replaces the first.
+- A broker outage degrades to replay plus heartbeats instead of failing.
+
+Example:
+
+```bash
+curl -N "http://127.0.0.1:8000/api/v1/projects/42/events" \
+  -H "Authorization: Bearer <access_token>"
+```
 
 ## Configuration
 
@@ -223,6 +267,10 @@ Configuration is loaded from a `.env` file via Pydantic Settings.
 | `REFRESH_TOKEN_EXPIRE_M` | No | Refresh token lifetime in minutes (default: `43200`) |
 | `COOKIE_SECURE` | No | Default: `true` |
 | `COOKIE_SAMESITE` | No | One of `lax`, `strict`, `none` |
+| `SSE_HEARTBEAT_S` | No | Heartbeat comment interval in seconds (default: `15`) |
+| `SSE_IDLE_TIMEOUT_S` | No | Retire streams without progress after this many seconds (default: `300`) |
+| `SSE_MAX_QUEUED_EVENTS` | No | Per-stream queue bound before forced disconnect (default: `10000`) |
+| `SSE_REPLAY_LIMIT` | No | Maximum replayed events per reconnect (default: `500`) |
 
 \* Required only when running via Docker Compose.
 
@@ -463,5 +511,4 @@ The following will be added to this service as the NexaDesk platform grows:
 - Labels API and task watchers
 - Task relations and cross-project task moves
 - Activity log and notifications
-- Real-time updates (SSE event broadcasting)
 - Search and reporting

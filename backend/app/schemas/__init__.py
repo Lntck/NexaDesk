@@ -7,6 +7,7 @@ from .common import (
     PatchSchema,
     check_sort,
 )
+from .event import EventActor, RealtimeEvent
 from .label import LabelCreate, LabelPatch, LabelRead
 from .member import MemberAdd, MemberList, MemberRead, MemberRolePatch
 from .project import (
@@ -42,6 +43,8 @@ __all__ = (
     "CommentCreate",
     "CommentPatch",
     "CommentRead",
+    "EventActor",
+    "RealtimeEvent",
     "MAX_PAGE_SIZE",
     "PageParams",
     "Paginated",

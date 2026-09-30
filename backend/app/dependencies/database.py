@@ -23,7 +23,7 @@ async def get_db_session(
         AsyncSession: session bound to the request transaction.
     """
     db = request.app.state.db
-    publisher = get_event_publisher()
+    publisher = get_event_publisher(request)
 
     async for session in db.session_getter():
         yield session
