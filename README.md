@@ -35,6 +35,7 @@ are implemented and run via Docker Compose:
 - Project labels and task labels
 - Task watchers with idempotent watch/unwatch
 - Activity history with after-commit event publishing
+- Notifications (mentions, assignments, watched-task changes) with read state
 - Real-time project event stream (SSE) with replay after reconnect
 - Async SQLAlchemy 2.0 + PostgreSQL, Redis
 - Health probes, rate limiting, centralized exception handling
@@ -78,6 +79,6 @@ and the API reference, see [backend/README.md](backend/README.md).
 - [x] Tasks and kanban board
 - [x] Comments, labels, watchers
 - [x] Activity history
-- [ ] Notifications
+- [x] Notifications
 - [x] Real-time updates
 - [ ] Web client (`frontend/`)
