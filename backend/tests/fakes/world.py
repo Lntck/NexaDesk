@@ -6,6 +6,7 @@ from app.services import (
     ActivityService,
     CommentService,
     LabelService,
+    NotificationService,
     ProjectService,
     TaskService,
     TaskStatusService,
@@ -16,6 +17,7 @@ from .activity_crud import FakeActivityCRUD
 from .comment_crud import FakeCommentCRUD
 from .domain import DomainStore
 from .label_crud import FakeLabelCRUD
+from .notification_crud import FakeNotificationCRUD
 from .project_crud import FakeProjectCRUD
 from .project_member_crud import FakeProjectMemberCRUD
 from .task_crud import FakeTaskCRUD
@@ -66,8 +68,17 @@ class DomainWorld:
         self.label_crud = FakeLabelCRUD(self.store)
         self.task_label_crud = FakeTaskLabelCRUD(self.store)
         self.task_watcher_crud = FakeTaskWatcherCRUD(self.store, self.user_crud)
+        self.notification_crud = FakeNotificationCRUD(self.store, self.user_crud)
         self.activity_crud = FakeActivityCRUD(self.store)
-        self.activity = ActivityLog(self.activity_crud)
+        self.notification_service = NotificationService(
+            self.notification_crud,
+            self.task_crud,
+            self.project_crud,
+            self.member_crud,
+            self.task_watcher_crud,
+            self.user_crud,
+        )
+        self.activity = ActivityLog(self.activity_crud, self.notification_service)
         self.project_service = ProjectService(
             self.project_crud,
             self.member_crud,

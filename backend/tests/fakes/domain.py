@@ -2,6 +2,7 @@ from app.models import (
     ActivityEvent,
     Comment,
     Label,
+    Notification,
     Project,
     ProjectMember,
     Task,
@@ -25,8 +26,10 @@ class DomainStore:
         self.task_labels: dict[tuple[int, int], TaskLabel] = {}
         self.task_watchers: dict[tuple[int, int], TaskWatcher] = {}
         self.events: dict[str, ActivityEvent] = {}
+        self.notifications: dict[int, Notification] = {}
         self.project_seq = 1
         self.status_seq = 1
         self.task_seq = 1
         self.comment_seq = 1
         self.label_seq = 1
+        self.notification_seq = 1

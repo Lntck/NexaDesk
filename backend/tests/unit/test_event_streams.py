@@ -4,12 +4,14 @@ from datetime import datetime, timezone
 import pytest
 from fakeredis.aioredis import FakeRedis
 
-from app.enums import ActivityEventType
+from app.enums import ActivityEventType, NotificationDeliveryType
 from app.events import DomainEvent
 from app.events.publisher import RedisPublisher
 from app.events.sse import HEARTBEAT_FRAME, project_channel
 from app.events.streams import (
     ConnectionManager,
+    StreamConnection,
+    _feed_events,
     _watch_idle,
     project_event_stream,
 )
@@ -253,3 +255,56 @@ async def test_replay_rows_after_id():
     ]
     limited = await crud.list_events_after(None, 42, after_id, 1)
     assert [row.id for row in limited] == ["01928b7e-0000-7000-8000-000000000052"]
+
+
+def drain(connection) -> list[bytes]:
+    """Collect the frames queued for one stream.
+
+    Args:
+        connection: stream whose queue is drained.
+
+    Returns:
+        list[bytes]: queued SSE frames in delivery order.
+    """
+    frames = []
+    while not connection.queue.empty():
+        frames.append(connection.queue.get_nowait())
+    return frames
+
+
+@pytest.mark.asyncio
+async def test_feed_delivers_notifications_to_recipient_only():
+    """Notification frames reach only the addressed user's stream."""
+    fake = FakeRedis()
+    mine = StreamConnection(user_id=5, project_id=42, max_queued_events=10)
+    theirs = StreamConnection(user_id=6, project_id=42, max_queued_events=10)
+    pubsub_one = fake.pubsub()
+    pubsub_two = fake.pubsub()
+    await pubsub_one.subscribe(project_channel(42))
+    await pubsub_two.subscribe(project_channel(42))
+    feed_one = asyncio.create_task(_feed_events(mine, pubsub_one))
+    feed_two = asyncio.create_task(_feed_events(theirs, pubsub_two))
+    await wait_until_subscribed(fake, project_channel(42))
+
+    notification = make_realtime_event(
+        "01928b7e-0000-7000-8000-000000000060",
+        type=NotificationDeliveryType.NOTIFICATION_CREATED,
+        recipient_id=5,
+        data={"id": 3},
+    )
+    await fake.publish(project_channel(42), notification.model_dump_json())
+    await fake.publish(
+        project_channel(42),
+        make_realtime_event("01928b7e-0000-7000-8000-000000000061").model_dump_json(),
+    )
+    await asyncio.sleep(0.2)
+
+    mine_frames = drain(mine)
+    assert len(mine_frames) == 2
+    assert b"notification.created" in mine_frames[0]
+    assert len(drain(theirs)) == 1
+    for task in (feed_one, feed_two):
+        task.cancel()
+    await pubsub_one.aclose()
+    await pubsub_two.aclose()
+    await fake.aclose()
