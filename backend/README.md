@@ -136,7 +136,6 @@ API (endpoints) -> Services (business logic) -> CRUD (data access) -> Models
 |- .env.template
 |- alembic.ini
 |- docker-compose.yml       # Local development
-|- docker-compose.prod.yml  # Production
 |- Dockerfile
 |- Makefile
 |- poetry.lock
@@ -167,6 +166,7 @@ Auth and user endpoints are under `/api/v1`. Health endpoints are top-level.
 |---|---|---|---|---|
 | GET | `/health/live` | No | - | Liveness probe |
 | GET | `/health/ready` | No | - | Readiness probe (checks Postgres + Redis) |
+| GET | `/health` | No | - | Aggregate health probe (same checks as readiness) |
 | POST | `/api/v1/register` | No | 1/min | Register a new user |
 | POST | `/api/v1/login` | No | 5/min | Login with username/password form |
 | POST | `/api/v1/refresh` | No | 3/min | Rotate refresh token and issue a new access token |
@@ -298,7 +298,11 @@ Notes:
 
 ## Quick Start (Docker Compose)
 
-This is the recommended way to run the project locally. Service hostnames
+To run the whole product (API + web client) with one command, use the compose
+file at the repository root and the root README. The steps below run only the
+backend stack.
+
+This is the recommended way to run the backend locally. Service hostnames
 (`db`, `redis`) resolve inside the Docker network.
 
 ### 1. Create the environment file
@@ -341,17 +345,6 @@ Once running, open:
 
 - Swagger UI: `http://127.0.0.1:8000/docs`
 - ReDoc: `http://127.0.0.1:8000/redoc`
-
-### Production
-
-A dedicated compose file is provided for production (e.g., on a VPS). It pulls a
-prebuilt image and reads secrets from a server-side `.env`:
-
-```bash
-docker compose -f docker-compose.prod.yml up -d
-```
-
-The image is published to GHCR as `ghcr.io/lntck/nexadesk:latest`.
 
 ## Local Development (without Docker)
 

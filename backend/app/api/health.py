@@ -18,9 +18,13 @@ async def liveness_probe():
     return {"status": "ok"}
 
 
-@router.get("/ready")
+@router.get("", summary="Aggregate health probe")
+@router.get("/ready", summary="Readiness probe")
 async def readiness_probe(request: Request):
     """Check backing services and report readiness.
+
+    Serves both `/health` and `/health/ready`: external monitors probe the
+    aggregate path, orchestration gates traffic on the readiness path.
 
     Pings PostgreSQL and Redis in parallel with a short timeout; any
     failure downgrades the result to an error state.
