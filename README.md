@@ -15,16 +15,22 @@ NexaDesk lets teams organize work into projects, break it down into tasks, assig
 
 NexaDesk is a monorepo: the backend lives in [`backend/`](backend/) and has its own
 [README](backend/README.md) with the full technical documentation (architecture,
-API, configuration, development workflow). New domain APIs (projects, tasks,
-comments, real-time updates) will be added there.
+API, configuration, development workflow). The API contract is described in
+[`docs/api-endpoints.md`](docs/api-endpoints.md).
 
 ## Current Status
 
-The backend foundation is implemented and runs via Docker Compose:
+The backend foundation and the project/task domain are implemented and run via
+Docker Compose:
 
 - JWT authentication (access/refresh tokens with rotation and revocation)
 - Role-Based Access Control (hierarchical `user` < `admin` roles)
 - User registration, login, profile endpoints
+- Projects with membership roles and ownership transfer
+- Board statuses with default columns per project
+- Tasks with project-scoped keys, priorities, assignment, parent tasks
+- Kanban board with per-column ordering and one-step status transitions
+- Optimistic concurrency for task edits (`If-Match`)
 - Async SQLAlchemy 2.0 + PostgreSQL, Redis
 - Health probes, rate limiting, centralized exception handling
 
@@ -62,9 +68,10 @@ and the API reference, see [backend/README.md](backend/README.md).
 
 ## Roadmap
 
-- ✅ Backend core: auth, users, RBAC, async stack
-- ⬜ Projects and project membership
-- ⬜ Tasks and kanban board
-- ⬜ Comments
-- ⬜ Real-time updates
-- ⬜ Web client (`frontend/`)
+- [x] Backend core: auth, users, RBAC, async stack
+- [x] Projects and project membership
+- [x] Tasks and kanban board
+- [ ] Comments, labels, watchers
+- [ ] Activity and notifications
+- [ ] Real-time updates
+- [ ] Web client (`frontend/`)

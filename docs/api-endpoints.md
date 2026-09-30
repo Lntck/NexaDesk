@@ -42,7 +42,10 @@ Implemented  — exists in the codebase and is covered by tests
 Planned      — the contract for upcoming work; implement exactly as specified here
 ```
 
-Currently Implemented: §6 Authentication and health probes. Everything else is Planned.
+Currently Implemented: §2 Domain Model, §3 Roles, §4 HTTP Conventions, §5 Pagination,
+§6 Authentication, §7 Projects, §8 Project Members, §9 Task Status, §10 Tasks,
+§11 Task Workflow, §12 Task Assignment, §14 Kanban Board, §32 Optimistic
+Concurrency. The remaining sections are Planned.
 
 ---
 
@@ -268,6 +271,7 @@ token_invalid                401   refresh token rejected
 forbidden                    403   member without permission
 project_not_found            404   also returned to non-members
 task_not_found               404   also returned to non-members
+status_not_found             404   task status of a project
 user_not_found               404
 comment_not_found            404
 already_exists               409   duplicate key, label attach, etc.
@@ -276,6 +280,7 @@ stale_version                409   If-Match mismatch (see section 32)
 status_in_use                409   deleting a status that still has tasks
 archived_collection          409   write operation on an archived project
 payload_error                422   semantic validation (bad ids, cycles)
+precondition_required        428   If-Match header missing (see section 32)
 rate_limited                 429
 ```
 
