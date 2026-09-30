@@ -1,0 +1,11 @@
+# VCS
+.git
+.gitignore
+
+# Dependencies and build output
+node_modules
+dist
+
+# Local configuration
+*.local
+.env
