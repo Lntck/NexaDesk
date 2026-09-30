@@ -10,6 +10,7 @@ from .common import (
 from .event import EventActor, RealtimeEvent
 from .label import LabelCreate, LabelPatch, LabelRead
 from .member import MemberAdd, MemberList, MemberRead, MemberRolePatch
+from .notification import NotificationProject, NotificationRead, NotificationTask
 from .project import (
     OwnershipTransfer,
     ProjectCreate,
@@ -57,6 +58,9 @@ __all__ = (
     "MemberList",
     "MemberRead",
     "MemberRolePatch",
+    "NotificationProject",
+    "NotificationRead",
+    "NotificationTask",
     "OwnershipTransfer",
     "ProjectCreate",
     "ProjectCreated",
