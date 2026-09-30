@@ -166,6 +166,7 @@ Auth and user endpoints are under `/api/v1`. Health endpoints are top-level.
 |---|---|---|---|---|
 | GET | `/health/live` | No | - | Liveness probe |
 | GET | `/health/ready` | No | - | Readiness probe (checks Postgres + Redis) |
+| GET | `/health` | No | - | Aggregate health probe (same checks as readiness) |
 | POST | `/api/v1/register` | No | 1/min | Register a new user |
 | POST | `/api/v1/login` | No | 5/min | Login with username/password form |
 | POST | `/api/v1/refresh` | No | 3/min | Rotate refresh token and issue a new access token |

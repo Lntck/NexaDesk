@@ -68,6 +68,7 @@ Database migrations are applied automatically before the API starts.
 * Web client: http://localhost:8080
 * Swagger UI: http://localhost:8000/docs
 * ReDoc: http://localhost:8000/redoc
+* Health probe: http://localhost:8000/health
 * Readiness probe: http://localhost:8000/health/ready
 
 Register the first account, create a project and start working on the board.
