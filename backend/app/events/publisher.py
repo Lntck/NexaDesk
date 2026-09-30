@@ -15,8 +15,8 @@ from typing import TYPE_CHECKING, Protocol
 from sqlalchemy import select
 
 from app.core.logger import logger
-from app.enums import ActivityEventType
-from app.events import DomainEvent, new_event_id
+from app.enums import ActivityEventType, NotificationDeliveryType
+from app.events import DomainEvent, NotificationDelivery, new_event_id
 from app.events.sse import project_channel
 from app.models import User
 from app.schemas.event import EventActor, RealtimeEvent
@@ -100,7 +100,10 @@ class RedisPublisher:
         """Publish one domain event to its project channel.
 
         Events without a project scope have no stream audience yet and are
-        skipped. Broker and lookup failures are logged and swallowed.
+        skipped. Every notification attached to the event is published as
+        its own ``notification.created`` frame carrying the recipient, so
+        streams can drop it for everyone else. Broker and lookup failures
+        are logged and swallowed.
 
         Args:
             event: domain event queued during the committed transaction.
@@ -109,11 +112,40 @@ class RedisPublisher:
             return
         try:
             envelope = await self._build_envelope(event)
-            await self.client.publish(
-                project_channel(event.project_id), envelope.model_dump_json()
-            )
+            channel = project_channel(event.project_id)
+            await self.client.publish(channel, envelope.model_dump_json())
+            for delivery in event.notifications:
+                frame = self._notification_frame(envelope, delivery)
+                await self.client.publish(channel, frame.model_dump_json())
         except Exception as exc:
             logger.warning("event publish failed for %s: %s", event.type, exc)
+
+    @staticmethod
+    def _notification_frame(
+        envelope: RealtimeEvent, delivery: NotificationDelivery
+    ) -> RealtimeEvent:
+        """Build the recipient-scoped notification frame of one event.
+
+        The frame reuses the id of the source activity entry, so the SSE
+        replay cursor stays a single sortable sequence.
+
+        Args:
+            envelope: envelope of the source domain event.
+            delivery: recipient and rendered notification payload.
+
+        Returns:
+            RealtimeEvent: notification.created envelope.
+        """
+        return RealtimeEvent(
+            id=envelope.id,
+            type=NotificationDeliveryType.NOTIFICATION_CREATED,
+            project_id=envelope.project_id,
+            task_id=envelope.task_id,
+            actor=envelope.actor,
+            recipient_id=delivery.user_id,
+            timestamp=envelope.timestamp,
+            data=delivery.payload,
+        )
 
     async def _build_envelope(self, event: DomainEvent) -> RealtimeEvent:
         """Convert a domain event into its wire envelope.

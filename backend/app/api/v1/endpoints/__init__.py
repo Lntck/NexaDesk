@@ -4,6 +4,7 @@ from .comments import router as comments_router
 from .events import router as events_router
 from .labels import router as labels_router
 from .members import router as members_router
+from .notifications import router as notifications_router
 from .projects import router as projects_router
 from .statuses import router as statuses_router
 from .tasks import router as tasks_router
@@ -17,6 +18,7 @@ __all__ = (
     "events_router",
     "labels_router",
     "members_router",
+    "notifications_router",
     "projects_router",
     "statuses_router",
     "tasks_router",

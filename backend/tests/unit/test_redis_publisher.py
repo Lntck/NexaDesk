@@ -4,7 +4,7 @@ import contextlib
 import pytest
 from fakeredis.aioredis import FakeRedis
 
-from app.events import DomainEvent
+from app.events import DomainEvent, NotificationDelivery
 from app.events.publisher import RedisPublisher
 from app.events.sse import project_channel
 from app.schemas.event import RealtimeEvent
@@ -121,6 +121,36 @@ async def test_publish_delivers_envelope_to_project_channel():
     assert event.actor is not None
     assert event.actor.username == "rush"
     assert event.data == {"to": "IN_PROGRESS"}
+    await pubsub.aclose()
+    await fake.aclose()
+
+
+@pytest.mark.asyncio
+async def test_notification_frames_carry_recipient():
+    """Attached notifications are published as addressed frames."""
+    fake = FakeRedis()
+    publisher = RedisPublisher(client=fake, actor_lookup=StubLookup({7: "rush"}))
+    pubsub = fake.pubsub()
+    await pubsub.subscribe(project_channel(42))
+    event = make_domain_event(
+        notifications=(
+            NotificationDelivery(
+                user_id=5,
+                payload={"id": 3, "type": "task.assigned", "is_read": False},
+            ),
+        )
+    )
+
+    await publisher.publish(event)
+    messages = await collect_messages(pubsub)
+
+    assert len(messages) == 2
+    frame = RealtimeEvent.model_validate_json(messages[1]["data"])
+    assert frame.type.value == "notification.created"
+    assert frame.id == event.id
+    assert frame.recipient_id == 5
+    assert frame.data["id"] == 3
+    assert RealtimeEvent.model_validate_json(messages[0]["data"]).recipient_id is None
     await pubsub.aclose()
     await fake.aclose()
 

@@ -7,6 +7,7 @@ from app.api.v1.endpoints import (
     events_router,
     labels_router,
     members_router,
+    notifications_router,
     projects_router,
     statuses_router,
     tasks_router,
@@ -26,3 +27,4 @@ router.include_router(events_router)
 router.include_router(comments_router)
 router.include_router(labels_router)
 router.include_router(watchers_router)
+router.include_router(notifications_router)

@@ -5,6 +5,7 @@ from app.crud import (
     ActivityCRUD,
     CommentCRUD,
     LabelCRUD,
+    NotificationCRUD,
     ProjectCRUD,
     ProjectMemberCRUD,
     TaskCRUD,
@@ -13,12 +14,13 @@ from app.crud import (
     TaskWatcherCRUD,
     UserCRUD,
 )
-from app.events import ActivityLog
+from app.events import ActivityLog, EventReactor
 from app.services import (
     ActivityService,
     AuthService,
     CommentService,
     LabelService,
+    NotificationService,
     ProjectService,
     TaskService,
     TaskStatusService,
@@ -31,6 +33,7 @@ from .crud import (
     get_comment_crud,
     get_label_crud,
     get_member_crud,
+    get_notification_crud,
     get_project_crud,
     get_status_crud,
     get_task_crud,
@@ -40,18 +43,46 @@ from .crud import (
 )
 
 
+async def get_notification_service(
+    notification_crud: NotificationCRUD = Depends(get_notification_crud),
+    task_crud: TaskCRUD = Depends(get_task_crud),
+    project_crud: ProjectCRUD = Depends(get_project_crud),
+    member_crud: ProjectMemberCRUD = Depends(get_member_crud),
+    watcher_crud: TaskWatcherCRUD = Depends(get_task_watcher_crud),
+    user_crud: UserCRUD = Depends(get_user_crud),
+) -> NotificationService:
+    """Return the notification service.
+
+    Args:
+        notification_crud: notification row storage.
+        task_crud: task storage used for the source snapshot.
+        project_crud: project storage used for the source snapshot.
+        member_crud: membership storage used to keep outsiders out.
+        watcher_crud: watcher storage used to resolve task subscribers.
+        user_crud: user storage used to resolve the actor.
+
+    Returns:
+        NotificationService: notification policy and read state.
+    """
+    return NotificationService(
+        notification_crud, task_crud, project_crud, member_crud, watcher_crud, user_crud
+    )
+
+
 async def get_activity_log(
     activity_crud: ActivityCRUD = Depends(get_activity_crud),
+    reactor: EventReactor = Depends(get_notification_service),
 ) -> ActivityLog:
     """Return the activity history recorder.
 
     Args:
         activity_crud: activity history storage.
+        reactor: side effects created for recorded entries.
 
     Returns:
         ActivityLog: recorder writing the immutable activity history.
     """
-    return ActivityLog(activity_crud)
+    return ActivityLog(activity_crud, reactor)
 
 
 async def get_user_service(

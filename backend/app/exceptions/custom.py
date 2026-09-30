@@ -150,6 +150,14 @@ class CommentNotFound(AppException):
     code = "comment_not_found"
 
 
+class NotificationNotFound(AppException):
+    """Raised when a notification does not exist or belongs to another user."""
+
+    status_code = 404
+    detail = "Notification not found"
+    code = "notification_not_found"
+
+
 class LabelNotFound(AppException):
     """Raised when a label does not exist in the given project."""
 

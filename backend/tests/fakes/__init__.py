@@ -2,6 +2,7 @@ from .activity_crud import FakeActivityCRUD
 from .comment_crud import FakeCommentCRUD
 from .domain import DomainStore
 from .label_crud import FakeLabelCRUD
+from .notification_crud import FakeNotificationCRUD
 from .project_crud import FakeProjectCRUD
 from .project_member_crud import FakeProjectMemberCRUD
 from .task_crud import FakeTaskCRUD
@@ -15,6 +16,7 @@ __all__ = (
     "FakeActivityCRUD",
     "FakeCommentCRUD",
     "FakeLabelCRUD",
+    "FakeNotificationCRUD",
     "FakeProjectCRUD",
     "FakeProjectMemberCRUD",
     "FakeTaskCRUD",

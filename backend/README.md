@@ -7,8 +7,7 @@ PostgreSQL and Redis.
 This directory is the backend of the NexaDesk monorepo. The service implements
 the user/auth core and the project/task domain (projects, membership, board
 statuses, tasks, kanban board) together with the collaboration domain (comments,
-labels, watchers, activity history). Real-time updates and notifications are
-added as new modules under `app/api/v1/`.
+labels, watchers, activity history) and the notification domain.
 
 ## What Is Implemented
 
@@ -52,10 +51,18 @@ added as new modules under `app/api/v1/`.
   - Append-only events for project, member, task, comment, label and watcher
     changes
   - After-commit domain event publishing hook (outbox-ready)
+- Notifications:
+  - User-scoped notices created in the same transaction as the source change
+    (assignment, mentions, comments on watched tasks, status changes, task
+    updates, member added)
+  - Read/unread state with `read` filter, single and bulk mark-as-read
+  - Payload snapshot of the source task, so notices survive renames and soft
+    deletes
 - Realtime updates:
   - After-commit domain event publishing to Redis Pub/Sub
   - Per-project SSE stream with `Last-Event-ID` replay from the activity
     history
+  - `notification.created` frames addressed to a single user
   - Heartbeat comments, idle stream retirement, bounded per-client queues
   - One stream per client per project enforced by the connection registry
 
@@ -206,6 +213,9 @@ Auth and user endpoints are under `/api/v1`. Health endpoints are top-level.
 | DELETE | `/api/v1/tasks/{task_id}/watchers/{user_id}` | Self or project `admin` | - | Remove a watcher |
 | GET | `/api/v1/projects/{project_id}/activity` | Project `viewer` | - | Project activity history |
 | GET | `/api/v1/tasks/{task_id}/activity` | Project `viewer` | - | Task activity history |
+| GET | `/api/v1/notifications` | Bearer (`user`) | - | List own notifications (`read` filter) |
+| POST | `/api/v1/notifications/{notification_id}/read` | Bearer (`user`) | - | Mark one notification as read |
+| POST | `/api/v1/notifications/read-all` | Bearer (`user`) | - | Mark all own notifications as read |
 | GET | `/api/v1/projects/{project_id}/events` | Project `viewer` | - | Project realtime event stream (SSE) |
 
 Interactive API docs: Swagger UI at `/docs`, ReDoc at `/redoc`.
@@ -235,10 +245,14 @@ Behavior:
 
 - On reconnect the client sends `Last-Event-ID` and receives the events it
   missed, replayed from the activity history (`activity_events`).
+- `notification.created` frames carry the rendered notification and reach
+  only the user named in `recipient_id`.
 - Heartbeat comments are sent every 15 seconds so proxies keep the stream.
 - Streams are retired after 5 minutes without progress or 10000 queued
   events; the client reconnects and replays.
 - One stream per client per project: a second connect replaces the first.
+- `notification.created` frames carry the rendered notification and reach
+  only the user named in `recipient_id`.
 - A broker outage degrades to replay plus heartbeats instead of failing.
 
 Example:
@@ -475,6 +489,9 @@ the implemented domain:
 | `task_not_found` | 404 | Missing task or caller is not a member |
 | `status_not_found` | 404 | Board status of a project is missing |
 | `user_not_found` | 404 | Missing user account |
+| `comment_not_found` | 404 | Missing comment or caller cannot see the task |
+| `label_not_found` | 404 | Missing project label |
+| `notification_not_found` | 404 | Missing notification or owned by another user |
 | `already_exists` | 409 | Duplicate key or membership |
 | `invalid_transition` | 409 | Status change is not one step along the board |
 | `stale_version` | 409 | `If-Match` version does not match the task |
@@ -507,8 +524,5 @@ poetry run alembic downgrade -1
 
 The following will be added to this service as the NexaDesk platform grows:
 
-- Comments API
-- Labels API and task watchers
 - Task relations and cross-project task moves
-- Activity log and notifications
 - Search and reporting

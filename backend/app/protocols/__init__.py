@@ -2,6 +2,7 @@ from .activity import ActivityCRUDProtocol, ActivityLogProtocol
 from .comment import CommentCRUDProtocol
 from .label import LabelCRUDProtocol
 from .membership import ProjectMemberCRUDProtocol, ProjectMembershipProtocol
+from .notification import NotificationCRUDProtocol
 from .project import ProjectCRUDProtocol
 from .task import TaskCRUDProtocol
 from .task_label import TaskLabelCRUDProtocol
@@ -14,6 +15,7 @@ __all__ = (
     "ActivityLogProtocol",
     "CommentCRUDProtocol",
     "LabelCRUDProtocol",
+    "NotificationCRUDProtocol",
     "ProjectCRUDProtocol",
     "ProjectMemberCRUDProtocol",
     "ProjectMembershipProtocol",

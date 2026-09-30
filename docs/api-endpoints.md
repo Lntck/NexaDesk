@@ -44,8 +44,10 @@ Planned      — the contract for upcoming work; implement exactly as specified 
 
 Currently Implemented: §2 Domain Model, §3 Roles, §4 HTTP Conventions, §5 Pagination,
 §6 Authentication, §7 Projects, §8 Project Members, §9 Task Status, §10 Tasks,
-§11 Task Workflow, §12 Task Assignment, §14 Kanban Board, §32 Optimistic
-Concurrency. The remaining sections are Planned.
+§11 Task Workflow, §12 Task Assignment, §13 Task Move, §14 Kanban Board,
+§15 Comments, §16 Labels, §17 Watchers, §19 Activity, §20 Notifications,
+§21-25 Realtime SSE, §31 Transaction Rules, §32 Optimistic Concurrency.
+The remaining sections are Planned.
 
 ---
 
@@ -275,6 +277,7 @@ status_not_found             404   task status of a project
 user_not_found               404
 comment_not_found            404
 label_not_found              404
+notification_not_found       404
 already_exists               409   duplicate key, label attach, etc.
 invalid_transition           409   status change not allowed
 stale_version                409   If-Match mismatch (see section 32)
@@ -1616,9 +1619,16 @@ Activity events must be append-only.
 
 # 20. Notifications API
 
+Notifications are user-scoped notices about domain changes: mentions,
+assignments, comments on watched tasks, status changes, task updates and
+membership changes. They are created in the same transaction as the source
+change (section 31) and mirror the activity history (section 19).
+Notification `type` values are listed in section 2.2; mentions are created
+from `@username` in comment bodies (section 15).
+
 ## GET `/api/v1/notifications`
 
-Get notifications for the current user.
+Get notifications for the current user, newest first.
 
 ### Query
 
@@ -1626,8 +1636,41 @@ Get notifications for the current user.
 page
 page_size
 read        false returns only unread notifications (replaces a separate
-            /notifications/unread endpoint)
+            /notifications/unread endpoint), true returns only read ones,
+            omitted returns everything
 ```
+
+### Response
+
+```json
+{
+  "items": [
+    {
+      "id": 5,
+      "type": "task.assigned",
+      "project": {"id": 42, "key": "NEXA"},
+      "task": {"id": 123, "key": "NEXA-17", "title": "Fix login form"},
+      "actor": {"id": 7, "username": "rush"},
+      "data": {
+        "project_key": "NEXA",
+        "task_key": "NEXA-17",
+        "task_title": "Fix login form"
+      },
+      "is_read": false,
+      "created_at": "2026-09-29T17:00:00Z"
+    }
+  ],
+  "page": 1,
+  "page_size": 20,
+  "total": 1
+}
+```
+
+`project`, `task` and `actor` are null when the notification does not refer
+to them. `data` keeps a snapshot of the source (project key, task key and
+title) plus the event attributes (`from`, `to`, `role`, `fields`,
+`comment_id`), so the notice stays readable after the task is renamed or
+soft-deleted.
 
 ---
 
@@ -1635,19 +1678,51 @@ read        false returns only unread notifications (replaces a separate
 
 Mark one notification as read.
 
-Notification `type` values match activity events plus:
+### Response
+
+200 with the updated notification body (schema above). Marking an already
+read notification is a no-op and returns 200 again.
+
+### Errors
 
 ```text
-mention
+notification_not_found    404   missing or owned by another user
 ```
-
-Mentions are created from `@username` in comment bodies (section 15).
 
 ---
 
 ## POST `/api/v1/notifications/read-all`
 
 Mark all current user's notifications as read.
+
+### Response
+
+```text
+204 No Content
+```
+
+---
+
+## Notification rules
+
+Notifications are created from activity events. The actor is never notified
+about their own change, and only current project members are notified about
+task changes.
+
+```text
+task.assigned          new assignee
+task.status_changed    task watchers
+task.updated           task watchers
+comment.created        task watchers; users mentioned in the comment get
+                       comment.mentioned instead
+comment.mentioned      mentioned user (one notice per comment: saving the
+                       body again does not re-notify)
+member.added           added member
+```
+
+Live notices are pushed to the project event stream as `notification.created`
+frames addressed to a single user (sections 21-22). Read state changes are not
+broadcast: after a reconnect the client resyncs through this endpoint.
 
 ---
 
@@ -1728,6 +1803,9 @@ Recommended common fields:
 }
 ```
 
+Notification frames additionally carry `recipient_id`, the id of the user the
+frame is addressed to; it is null for regular events.
+
 ---
 
 # 22. SSE Event Types
@@ -1761,6 +1839,9 @@ activity.created
 ```
 
 The frontend listens to one project stream and updates local state when events arrive.
+
+`notification.created` frames carry the rendered notification under `data`
+(section 20) and reach only the user named in `recipient_id`.
 
 ---
 

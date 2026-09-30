@@ -1,6 +1,7 @@
 from .activity import ActivityCRUD
 from .comment import CommentCRUD
 from .label import LabelCRUD
+from .notification import NotificationCRUD
 from .project import ProjectCRUD
 from .project_member import ProjectMemberCRUD
 from .task import TaskCRUD
@@ -13,6 +14,7 @@ __all__ = (
     "ActivityCRUD",
     "CommentCRUD",
     "LabelCRUD",
+    "NotificationCRUD",
     "ProjectCRUD",
     "ProjectMemberCRUD",
     "TaskCRUD",
