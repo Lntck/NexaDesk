@@ -44,6 +44,14 @@ class UserRegister(UserBase):
     password: SecretStr = Field(..., min_length=8, max_length=24)
 
 
+# Compact user reference embedded into domain responses
+class UserBrief(BaseModel):
+    id: int
+    username: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 # Schema for reading user data | Output
 class UserRead(UserBase):
     id: int

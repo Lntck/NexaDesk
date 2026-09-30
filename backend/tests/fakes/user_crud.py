@@ -100,3 +100,27 @@ class InactiveUserCRUD(FakeUserCRUD):
         super().__init__()
         for user in self.users.values():
             user.is_active = False
+
+
+class StaticUserCRUD:
+    """User storage fake with preset accounts and no password hashing."""
+
+    def __init__(self, users):
+        """Index the preset accounts by id.
+
+        Args:
+            users: user accounts available to the tests.
+        """
+        self.users = {user.id: user for user in users}
+
+    async def get_by_id(self, session, user_id):
+        """Return the user with the given id.
+
+        Args:
+            session: unused session placeholder.
+            user_id: id of the requested user.
+
+        Returns:
+            User | None: the preset user or None.
+        """
+        return self.users.get(user_id)

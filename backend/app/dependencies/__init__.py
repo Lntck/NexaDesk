@@ -1,8 +1,19 @@
+from .crud import (
+    get_member_crud,
+    get_project_crud,
+    get_status_crud,
+    get_task_crud,
+    get_user_crud,
+)
 from .database import get_db_session
 from .events import get_event_publisher
+from .if_match import get_if_match_version
 from .redis import get_redis_client
 from .services import (
     get_auth_service,
+    get_project_service,
+    get_status_service,
+    get_task_service,
     get_user_service,
 )
 
@@ -12,4 +23,13 @@ __all__ = (
     "get_auth_service",
     "get_user_service",
     "get_event_publisher",
+    "get_if_match_version",
+    "get_member_crud",
+    "get_project_crud",
+    "get_project_service",
+    "get_status_crud",
+    "get_status_service",
+    "get_task_crud",
+    "get_task_service",
+    "get_user_crud",
 )

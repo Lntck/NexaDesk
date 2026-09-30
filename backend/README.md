@@ -4,9 +4,10 @@ Backend API for NexaDesk: a FastAPI service with JWT authentication, Role-Based
 Access Control (RBAC), and a fully async, layered architecture built on
 PostgreSQL and Redis.
 
-This directory is the backend of the NexaDesk monorepo. The service currently
-implements the user/auth core; domain APIs (projects, tasks, comments,
-real-time updates) will be added as new versioned modules under `app/api/v1/`.
+This directory is the backend of the NexaDesk monorepo. The service implements
+the user/auth core and the project/task domain (projects, membership, board
+statuses, tasks, kanban board). Remaining domain APIs (comments, labels,
+watchers, real-time updates) are added as new modules under `app/api/v1/`.
 
 ## What Is Implemented
 
@@ -28,6 +29,17 @@ real-time updates) will be added as new versioned modules under `app/api/v1/`.
 - Rate limiting (SlowAPI)
 - CORS middleware configuration
 - Liveness / readiness health probes
+- Project domain:
+  - Projects with unique keys, archive/restore, ownership transfer
+  - Project membership with roles (`owner` < `admin` < `member` < `viewer`)
+    and the single-owner invariant
+  - Board statuses with default columns and dense board positions
+  - Tasks with project-scoped numbers (`{KEY}-{n}`), soft delete, priority,
+    due date, estimation, parent task
+  - Task workflow: one-step transitions along the board columns
+  - Assignment/unassignment to project members
+  - Kanban board with per-column ordering (`rank`) and reorder command
+  - Optimistic concurrency for task edits via `If-Match`
 
 ## Tech Stack
 
@@ -75,18 +87,18 @@ API (endpoints) -> Services (business logic) -> CRUD (data access) -> Models
 |  |  |- health.py         # Liveness / readiness probes
 |  |  |- v1/
 |  |  |  |- router.py
-|  |  |  |- endpoints/     # auth, users
+|  |  |  |- endpoints/     # auth, users, projects, members, statuses, tasks
 |  |- auth/                # Auth dependencies, RBAC permissions, token schema
 |  |- core/                # Config, security, constants, limiter, logger
 |  |- crud/                # Data access layer
 |  |- db/                  # DatabaseClient (postgres), RedisClient
 |  |- dependencies/        # DI: db session, redis, crud, services
-|  |- enums/               # Role enum with hierarchical levels
+|  |- enums/               # Role, ProjectRole, Priority enums with levels
 |  |- exceptions/          # Custom exceptions + handlers
 |  |- models/              # SQLAlchemy models
 |  |- protocols/           # Typed CRUD protocols for DI
 |  |- schemas/             # Pydantic schemas
-|  |- services/            # Business logic (user, auth)
+|  |- services/            # Business logic (user, auth, project, status, task)
 |  |- utils/               # Helpers (cookie handling)
 |- tests/
 |  |- fakes/
@@ -130,8 +142,39 @@ Auth and user endpoints are under `/api/v1`. Health endpoints are top-level.
 | POST | `/api/v1/refresh` | No | 3/min | Rotate refresh token and issue a new access token |
 | POST | `/api/v1/logout` | No | 3/min | Revoke the current refresh token and clear the cookie |
 | GET | `/api/v1/about_me` | Bearer (`user`) | - | Get the current authenticated user |
+| GET | `/api/v1/projects` | Bearer (`user`) | - | List projects of the current user |
+| POST | `/api/v1/projects` | Bearer (`user`) | - | Create a project (caller becomes owner) |
+| GET | `/api/v1/projects/{project_id}` | Project `viewer` | - | Get project details |
+| PATCH | `/api/v1/projects/{project_id}` | Project `admin` | - | Update project metadata |
+| POST | `/api/v1/projects/{project_id}/archive` | Project `admin` | - | Archive a project |
+| POST | `/api/v1/projects/{project_id}/restore` | Project `admin` | - | Restore a project |
+| POST | `/api/v1/projects/{project_id}/transfer-ownership` | Project `owner` | - | Transfer ownership to a member |
+| GET | `/api/v1/projects/{project_id}/members` | Project `viewer` | - | List project members |
+| POST | `/api/v1/projects/{project_id}/members` | Project `admin` | - | Add an existing user to the project |
+| PATCH | `/api/v1/projects/{project_id}/members/{user_id}` | Project `admin` | - | Change a member role |
+| DELETE | `/api/v1/projects/{project_id}/members/{user_id}` | Project `admin` | - | Remove a member |
+| GET | `/api/v1/projects/{project_id}/statuses` | Project `viewer` | - | List board statuses |
+| POST | `/api/v1/projects/{project_id}/statuses` | Project `admin` | - | Create a custom board status |
+| PATCH | `/api/v1/projects/{project_id}/statuses/{status_id}` | Project `admin` | - | Update a status (name, color, position) |
+| DELETE | `/api/v1/projects/{project_id}/statuses/{status_id}` | Project `admin` | - | Delete an unused status |
+| GET | `/api/v1/projects/{project_id}/tasks` | Project `viewer` | - | List and filter tasks |
+| POST | `/api/v1/projects/{project_id}/tasks` | Project `member` | - | Create a task |
+| GET | `/api/v1/projects/{project_id}/board` | Project `viewer` | - | Kanban board grouped by status |
+| GET | `/api/v1/tasks/{task_id}` | Project `viewer` | - | Get task details |
+| PATCH | `/api/v1/tasks/{task_id}` | Project `member` + `If-Match` | - | Update editable task fields |
+| DELETE | `/api/v1/tasks/{task_id}` | Project `member` + `If-Match` | - | Soft-delete a task (own or any as admin/owner) |
+| POST | `/api/v1/tasks/{task_id}/transition` | Project `member` | - | Move the task to an adjacent column |
+| POST | `/api/v1/tasks/{task_id}/assign` | Project `member` | - | Assign the task to a project member |
+| POST | `/api/v1/tasks/{task_id}/unassign` | Project `member` | - | Remove the assignee |
+| POST | `/api/v1/tasks/{task_id}/reorder` | Project `member` | - | Place a card inside the board and recalculate ranks |
 
 Interactive API docs: Swagger UI at `/docs`, ReDoc at `/redoc`.
+
+The full contract with request/response examples lives in
+[`docs/api-endpoints.md`](../docs/api-endpoints.md). Project role checks:
+`viewer` and above can read, `member` and above can work with tasks, `admin`
+and above manage the project, statuses and members, `owner` transfers
+ownership. Users outside the project receive `404` instead of `403`.
 
 ## Configuration
 
@@ -339,18 +382,30 @@ curl -i -X POST "http://127.0.0.1:8000/api/v1/logout" \
 Application-specific errors use this shape:
 
 ```json
-{"detail": "..."}
+{"detail": "...", "code": "project_not_found"}
 ```
 
-Common statuses:
+`code` is a stable identifier for program handling; the registry lives in
+[`docs/api-endpoints.md`](../docs/api-endpoints.md), section 4. Codes used by
+the implemented domain:
 
-- `201` Created (register)
-- `200` OK (login, refresh, logout, about_me)
-- `401` Unauthorized (invalid credentials/token)
-- `403` Forbidden (insufficient role)
-- `404` Not Found (user not found)
-- `409` Conflict (user already exists)
-- `429` Too Many Requests (rate limit exceeded)
+| Code | Status | Meaning |
+|---|---|---|
+| `validation_error` | 422 | Schema violation |
+| `unauthenticated` | 401 | Missing or invalid access token |
+| `token_invalid` | 401 | Refresh token rejected |
+| `forbidden` | 403 | Project member without permission |
+| `project_not_found` | 404 | Missing project or caller is not a member |
+| `task_not_found` | 404 | Missing task or caller is not a member |
+| `status_not_found` | 404 | Board status of a project is missing |
+| `user_not_found` | 404 | Missing user account |
+| `already_exists` | 409 | Duplicate key or membership |
+| `invalid_transition` | 409 | Status change is not one step along the board |
+| `stale_version` | 409 | `If-Match` version does not match the task |
+| `status_in_use` | 409 | Deleting a status that still has tasks |
+| `archived_collection` | 409 | Write operation on an archived project |
+| `payload_error` | 422 | Semantic validation (bad ids, cycles) |
+| `precondition_required` | 428 | `If-Match` header missing on task writes |
 
 ## Migrations
 
@@ -376,8 +431,9 @@ poetry run alembic downgrade -1
 
 The following will be added to this service as the NexaDesk platform grows:
 
-- Projects API (create/manage team projects and membership)
-- Tasks API (task lifecycle, assignments, statuses, kanban board)
 - Comments API
-- Real-time updates (WebSocket/SSE event broadcasting)
-- API reference and OpenAPI tagging per domain module
+- Labels API and task watchers
+- Task relations and cross-project task moves
+- Activity log and notifications
+- Real-time updates (SSE event broadcasting)
+- Search and reporting
