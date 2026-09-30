@@ -2,21 +2,25 @@ from fastapi import Depends, Path
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_user
+from app.auth.roles import resolve_role
 from app.auth.schemas import CurrentUser
+from app.dependencies.crud import get_member_crud
 from app.dependencies.database import get_db_session
 from app.enums import ProjectRole
-from app.exceptions import AccessDenied, ProjectNotFound
 from app.protocols.membership import ProjectMembershipProtocol
 
+__all__ = ("RequireProjectRole", "get_project_membership", "resolve_role")
 
-def get_project_membership() -> ProjectMembershipProtocol | None:
+
+def get_project_membership(
+    membership: ProjectMembershipProtocol = Depends(get_member_crud),
+) -> ProjectMembershipProtocol:
     """Return the project membership lookup.
 
     Returns:
-        ProjectMembershipProtocol | None: lookup once it is wired during
-        the project domain work; None before that.
+        ProjectMembershipProtocol: lookup backed by project_members rows.
     """
-    return None
+    return membership
 
 
 class RequireProjectRole:
@@ -53,16 +57,10 @@ class RequireProjectRole:
             CurrentUser: the unchanged caller when access is granted.
 
         Raises:
-            RuntimeError: when the membership lookup is not configured yet.
-            ProjectNotFound: when the caller is not a member of the project.
-            AccessDenied: when the member role is below the required one.
+            RuntimeError: when the membership lookup is not wired.
         """
         if membership is None:
             raise RuntimeError("Project membership lookup is not configured")
-
         role = await membership.get_project_role(session, project_id, current_user.id)
-        if role is None:
-            raise ProjectNotFound
-        if role.level < self.required_role.level:
-            raise AccessDenied
+        resolve_role(role, self.required_role)
         return current_user
