@@ -1,0 +1,106 @@
+{
+  "style": {
+    "name": "Dark Liquid Glass",
+    "description": "Premium futuristic SaaS interface inspired by Apple's liquid glass aesthetic, combining deep dark backgrounds, translucent glass surfaces, soft blur, subtle reflections, and minimal monochrome UI.",
+    "theme": "dark",
+    "aesthetic": [
+      "minimal",
+      "premium",
+      "modern",
+      "futuristic",
+      "clean",
+      "elegant",
+      "glassmorphism",
+      "liquid glass"
+    ],
+    "colors": {
+      "background": "#05070B",
+      "background_secondary": "#0A0E14",
+      "surface": "rgba(255,255,255,0.04)",
+      "surface_hover": "rgba(255,255,255,0.07)",
+      "surface_active": "rgba(255,255,255,0.10)",
+      "border": "rgba(255,255,255,0.10)",
+      "border_strong": "rgba(255,255,255,0.16)",
+      "text_primary": "#F5F7FA",
+      "text_secondary": "#A8B0BE",
+      "text_muted": "#6F7785",
+      "accent": "subtle white, blue, purple and gray highlights"
+    },
+    "background": {
+      "base": "almost black with a very subtle deep blue tint",
+      "effects": [
+        "soft radial gradients",
+        "large blurred light spots",
+        "subtle blue or purple ambient glow",
+        "very faint glass reflections"
+      ],
+      "intensity": "low and atmospheric, never bright or distracting"
+    },
+    "glass": {
+      "background": "semi-transparent dark surfaces",
+      "blur": "20px-30px backdrop blur",
+      "border": "1px solid rgba(255,255,255,0.10)",
+      "shadow": "soft diffuse shadows",
+      "highlights": "subtle inner white reflections",
+      "depth": "multiple translucent layers creating floating glass depth"
+    },
+    "shape": {
+      "corners": "soft and highly rounded",
+      "cards": "16px-24px",
+      "panels": "20px-32px",
+      "buttons": "12px-18px",
+      "pills": "999px"
+    },
+    "typography": {
+      "font": "modern sans-serif similar to Inter, SF Pro or Geist",
+      "style": "clean, lightweight, highly readable",
+      "hierarchy": "strong white titles, muted gray secondary text",
+      "weight": "medium to semibold, avoid excessive boldness"
+    },
+    "icons": {
+      "style": "minimal outline icons",
+      "stroke": "thin and consistent",
+      "color": "white or soft gray",
+      "appearance": "Lucide, Phosphor or SF Symbols inspired"
+    },
+    "components": {
+      "cards": "dark translucent glass with thin borders, soft blur and subtle depth",
+      "buttons": "minimal glass buttons; primary actions can use a light white glass surface",
+      "inputs": "dark translucent rounded fields with subtle borders and soft focus glow",
+      "badges": "small rounded pills with very subtle semantic color accents",
+      "panels": "large floating glass surfaces with stronger blur and depth",
+      "modals": "elevated translucent glass with strong backdrop blur",
+      "navigation": "dark glass sidebar with highlighted active item"
+    },
+    "spacing": {
+      "layout": "spacious and uncluttered",
+      "density": "medium-low",
+      "whitespace": "generous",
+      "alignment": "precise and structured"
+    },
+    "effects": {
+      "hover": "subtle brightness and glass highlight",
+      "active": "slightly stronger contrast and border",
+      "focus": "soft glow around the element",
+      "transitions": "smooth, quick and understated",
+      "motion": "subtle fade, slide and scale animations"
+    },
+    "visual_rules": {
+      "primary_rule": "Everything should feel like transparent glass floating over a dark environment.",
+      "contrast": "high readability without harsh pure-black and pure-white blocks",
+      "colors": "mostly monochrome with restrained accent colors",
+      "depth": "achieved through blur, transparency, borders, reflections and layered surfaces",
+      "overall_feeling": "luxury Apple-inspired productivity software"
+    },
+    "avoid": [
+      "bright colorful UI",
+      "neon cyberpunk",
+      "flat opaque cards",
+      "heavy gradients",
+      "excessive shadows",
+      "sharp square corners",
+      "visual clutter",
+      "old-fashioned enterprise dashboard aesthetics"
+    ]
+  }
+}

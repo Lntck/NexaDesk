@@ -1,0 +1,135 @@
+/*
+ * NexaDesk design tokens — "Dark Liquid Glass".
+ * Values come from style.json (frontend/PLAN.md, "Дизайн-система") and are
+ * extended with the semantic colors, scales and motion the UI needs.
+ */
+
+:root {
+  /* Native widgets (select popups, scrollbars, date inputs) follow the dark scheme. */
+  color-scheme: dark;
+
+  /* Backgrounds */
+  --color-bg: #05070b;
+  --color-bg-secondary: #0a0e14;
+  --color-bg-elevated: #0d1219;
+
+  /* Translucent glass surfaces */
+  --color-surface: rgba(255, 255, 255, 0.04);
+  --color-surface-hover: rgba(255, 255, 255, 0.07);
+  --color-surface-active: rgba(255, 255, 255, 0.1);
+  --color-surface-solid: rgba(19, 24, 33, 0.72);
+  --color-surface-strong: rgba(255, 255, 255, 0.14);
+
+  /* Borders and inner reflections */
+  --color-border: rgba(255, 255, 255, 0.1);
+  --color-border-strong: rgba(255, 255, 255, 0.16);
+  --color-highlight: rgba(255, 255, 255, 0.12);
+  --color-reflection: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.08) 0%,
+    rgba(255, 255, 255, 0) 42%
+  );
+
+  /* Text */
+  --color-text: #f5f7fa;
+  --color-text-secondary: #a8b0be;
+  --color-text-muted: #7b8391;
+  --color-text-inverse: #05070b;
+
+  /* Accent: subtle white, blue and purple highlights */
+  --color-accent: #8ab4ff;
+  --color-accent-strong: #5b8cff;
+  --color-accent-soft: rgba(138, 180, 255, 0.16);
+  --color-accent-purple: #b39df5;
+  --color-accent-purple-soft: rgba(179, 157, 245, 0.16);
+  --color-accent-glow: rgba(110, 152, 255, 0.35);
+
+  /* Semantic colors */
+  --color-success: #5fd19a;
+  --color-success-soft: rgba(95, 209, 154, 0.15);
+  --color-warning: #e8b65c;
+  --color-warning-soft: rgba(232, 182, 92, 0.15);
+  --color-danger: #f2737f;
+  --color-danger-soft: rgba(242, 115, 127, 0.15);
+  --color-info: #6fb3f2;
+  --color-info-soft: rgba(111, 179, 242, 0.15);
+
+  /* Priority colors */
+  --color-priority-low: #7b8391;
+  --color-priority-low-soft: rgba(123, 131, 145, 0.16);
+  --color-priority-medium: #6fb3f2;
+  --color-priority-medium-soft: rgba(111, 179, 242, 0.16);
+  --color-priority-high: #e8b65c;
+  --color-priority-high-soft: rgba(232, 182, 92, 0.16);
+  --color-priority-critical: #f2737f;
+  --color-priority-critical-soft: rgba(242, 115, 127, 0.18);
+
+  /* Typography: Inter, 12/13/14/16/20/24/32 */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  --font-size-12: 0.75rem;
+  --font-size-13: 0.8125rem;
+  --font-size-14: 0.875rem;
+  --font-size-16: 1rem;
+  --font-size-20: 1.25rem;
+  --font-size-24: 1.5rem;
+  --font-size-32: 2rem;
+
+  --line-height-tight: 1.25;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.65;
+
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+
+  /* Radii: fixed steps inside the style.json ranges */
+  --radius-xs: 8px;
+  --radius-sm: 12px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --radius-pill: 999px;
+
+  /* Spacing scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  /* Depth: three shadow levels */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.24);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.32);
+  --shadow-lg: 0 20px 48px rgba(0, 0, 0, 0.44);
+  --shadow-glow: 0 0 0 1px rgba(138, 180, 255, 0.22), 0 8px 32px rgba(91, 140, 255, 0.18);
+
+  /* Glass blur */
+  --blur-heavy: 24px;
+  --blur-light: 12px;
+
+  /* Motion */
+  --duration-quick: 120ms;
+  --duration-base: 200ms;
+  --duration-slow: 320ms;
+  --ease-standard: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+
+  /* Z-index scale */
+  --z-base: 0;
+  --z-sticky: 10;
+  --z-dropdown: 100;
+  --z-drawer: 200;
+  --z-modal: 300;
+  --z-toast: 400;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-quick: 0ms;
+    --duration-base: 0ms;
+    --duration-slow: 0ms;
+  }
+}

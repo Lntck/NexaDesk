@@ -1,0 +1,253 @@
+/* Overlays: modal, drawer, dropdown, tooltip and toast stack. */
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-5);
+  background-color: rgba(3, 5, 9, 0.6);
+  backdrop-filter: blur(var(--blur-heavy));
+  -webkit-backdrop-filter: blur(var(--blur-heavy));
+}
+
+.modal {
+  position: relative;
+  width: 100%;
+  max-width: 560px;
+  max-height: calc(100vh - 2 * var(--space-5));
+  display: flex;
+  flex-direction: column;
+  background-color: var(--color-surface-solid);
+  background-image: var(--color-reflection);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+}
+
+.modalSm {
+  max-width: 420px;
+}
+
+.modalLg {
+  max-width: 760px;
+}
+
+.modalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-5) var(--space-5) var(--space-3);
+}
+
+.modalTitle {
+  font-size: var(--font-size-20);
+  font-weight: var(--font-weight-semibold);
+}
+
+.modalBody {
+  padding: 0 var(--space-5) var(--space-5);
+  overflow-y: auto;
+}
+
+.modalFooter {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-5) var(--space-5);
+}
+
+.closeButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-xs);
+  border: 1px solid transparent;
+  background-color: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition:
+    background-color var(--duration-quick) var(--ease-standard),
+    color var(--duration-quick) var(--ease-standard);
+}
+
+.closeButton:hover {
+  background-color: var(--color-surface-hover);
+  color: var(--color-text);
+}
+
+.drawerBackdrop {
+  z-index: var(--z-drawer);
+  align-items: stretch;
+  justify-content: flex-end;
+  padding: 0;
+}
+
+.drawer {
+  width: min(440px, 100vw);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: rgba(13, 18, 25, 0.82);
+  background-image: var(--color-reflection);
+  border-left: 1px solid var(--color-border-strong);
+  box-shadow: var(--shadow-lg);
+  backdrop-filter: blur(var(--blur-heavy));
+  -webkit-backdrop-filter: blur(var(--blur-heavy));
+}
+
+.drawerWide {
+  width: min(640px, 100vw);
+}
+
+.drawerHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.drawerBody {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-5);
+}
+
+.dropdown {
+  position: fixed;
+  z-index: var(--z-dropdown);
+  min-width: 200px;
+  padding: var(--space-2);
+  background-color: rgba(13, 18, 25, 0.92);
+  background-image: var(--color-reflection);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  backdrop-filter: blur(var(--blur-heavy));
+  -webkit-backdrop-filter: blur(var(--blur-heavy));
+}
+
+.dropdownItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: none;
+  border-radius: var(--radius-xs);
+  background-color: transparent;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-13);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--duration-quick) var(--ease-standard);
+}
+
+.dropdownItem:hover {
+  background-color: var(--color-surface-hover);
+  color: var(--color-text);
+}
+
+.dropdownItemActive {
+  color: var(--color-accent);
+  background-color: var(--color-accent-soft);
+}
+
+.dropdownItemDanger:hover {
+  background-color: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+.dropdownLabel {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--font-size-12);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.dropdownDivider {
+  height: 1px;
+  margin: var(--space-2) 0;
+  background-color: var(--color-border);
+}
+
+.tooltip {
+  position: fixed;
+  z-index: var(--z-toast);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--color-border);
+  background-color: rgba(13, 18, 25, 0.95);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-12);
+  pointer-events: none;
+  box-shadow: var(--shadow-sm);
+}
+
+.toastViewport {
+  position: fixed;
+  top: var(--space-5);
+  right: var(--space-5);
+  z-index: var(--z-toast);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: min(360px, calc(100vw - 2 * var(--space-5)));
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-strong);
+  background-color: rgba(13, 18, 25, 0.9);
+  box-shadow: var(--shadow-md);
+  backdrop-filter: blur(var(--blur-light));
+  -webkit-backdrop-filter: blur(var(--blur-light));
+  pointer-events: auto;
+}
+
+.toastIcon {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.toastSuccess .toastIcon {
+  color: var(--color-success);
+}
+
+.toastError .toastIcon {
+  color: var(--color-danger);
+}
+
+.toastInfo .toastIcon {
+  color: var(--color-info);
+}
+
+.toastContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.toastTitle {
+  font-size: var(--font-size-13);
+  font-weight: var(--font-weight-semibold);
+}
+
+.toastText {
+  font-size: var(--font-size-13);
+  color: var(--color-text-secondary);
+  overflow-wrap: anywhere;
+}
