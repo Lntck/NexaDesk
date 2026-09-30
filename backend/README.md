@@ -298,7 +298,11 @@ Notes:
 
 ## Quick Start (Docker Compose)
 
-This is the recommended way to run the project locally. Service hostnames
+To run the whole product (API + web client) with one command, use the compose
+file at the repository root and the root README. The steps below run only the
+backend stack.
+
+This is the recommended way to run the backend locally. Service hostnames
 (`db`, `redis`) resolve inside the Docker network.
 
 ### 1. Create the environment file
