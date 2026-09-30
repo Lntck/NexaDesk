@@ -10,7 +10,7 @@ settings = get_settings()
 
 app = FastAPI(
     title="NexaDesk API",
-    version="1.1.0",
+    version="1.2.0",
     debug=settings.debug,
     lifespan=lifespan,
 )
