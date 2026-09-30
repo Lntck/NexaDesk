@@ -28,6 +28,17 @@ async def register(
     session: AsyncSession = Depends(get_db_session),
     service: UserService = Depends(get_user_service),
 ):
+    """Register a new user account.
+
+    Args:
+        request: incoming request, kept for the rate limiter.
+        user: registration payload with email, name and password.
+        session: active database session.
+        service: user domain service.
+
+    Returns:
+        UserRead: the created user.
+    """
     return await service.create_user(session, user)
 
 
@@ -41,6 +52,19 @@ async def login(
     redis_client: redis.Redis = Depends(get_redis_client),
     service: AuthService = Depends(get_auth_service),
 ):
+    """Authenticate a user and issue a token pair.
+
+    Args:
+        request: incoming request, kept for the rate limiter.
+        response: response used to set the refresh token cookie.
+        form_data: OAuth2 form with username (email) and password.
+        session: active database session.
+        redis_client: redis client storing refresh tokens.
+        service: auth domain service.
+
+    Returns:
+        Token: the issued access token.
+    """
     access_token, refresh_token = await service.auth_user(
         session, redis_client, form_data.username.lower(), form_data.password
     )
@@ -59,6 +83,18 @@ async def refresh(
     redis_client: redis.Redis = Depends(get_redis_client),
     service: AuthService = Depends(get_auth_service),
 ):
+    """Rotate the refresh token and issue a new access token.
+
+    Args:
+        request: incoming request carrying the refresh token cookie.
+        response: response used to set the rotated refresh token cookie.
+        session: active database session.
+        redis_client: redis client storing refresh tokens.
+        service: auth domain service.
+
+    Returns:
+        Token: the newly issued access token.
+    """
     refresh_token = request.cookies.get("refresh_token", "")
 
     access_token, new_refresh_token = await service.refresh_token(
@@ -79,6 +115,21 @@ async def logout(
     redis_client: redis.Redis = Depends(get_redis_client),
     service: AuthService = Depends(get_auth_service),
 ):
+    """Revoke the refresh token and clear the auth cookie.
+
+    Errors from an invalid or expired token are ignored: the session
+    is considered over either way.
+
+    Args:
+        request: incoming request carrying the refresh token cookie.
+        response: response used to delete the refresh token cookie.
+        session: active database session.
+        redis_client: redis client storing refresh tokens.
+        service: auth domain service.
+
+    Returns:
+        dict: confirmation message.
+    """
     refresh_token = request.cookies.get("refresh_token", "")
 
     if refresh_token:

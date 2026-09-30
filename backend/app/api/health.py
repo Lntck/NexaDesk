@@ -10,11 +10,28 @@ router = APIRouter(tags=["Health"])
 
 @router.get("/live")
 async def liveness_probe():
+    """Report process liveness for container probes.
+
+    Returns:
+        dict: static status payload confirming the process is running.
+    """
     return {"status": "ok"}
 
 
 @router.get("/ready")
 async def readiness_probe(request: Request):
+    """Check backing services and report readiness.
+
+    Pings PostgreSQL and Redis in parallel with a short timeout; any
+    failure downgrades the result to an error state.
+
+    Args:
+        request: incoming request used to reach the application state.
+
+    Returns:
+        JSONResponse: per-service status with HTTP 200 when everything is
+        healthy and HTTP 503 otherwise.
+    """
     db: DatabaseClient = request.app.state.db
     redis: RedisClient = request.app.state.redis
 
