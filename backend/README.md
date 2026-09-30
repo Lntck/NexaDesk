@@ -136,7 +136,6 @@ API (endpoints) -> Services (business logic) -> CRUD (data access) -> Models
 |- .env.template
 |- alembic.ini
 |- docker-compose.yml       # Local development
-|- docker-compose.prod.yml  # Production
 |- Dockerfile
 |- Makefile
 |- poetry.lock
@@ -345,17 +344,6 @@ Once running, open:
 
 - Swagger UI: `http://127.0.0.1:8000/docs`
 - ReDoc: `http://127.0.0.1:8000/redoc`
-
-### Production
-
-A dedicated compose file is provided for production (e.g., on a VPS). It pulls a
-prebuilt image and reads secrets from a server-side `.env`:
-
-```bash
-docker compose -f docker-compose.prod.yml up -d
-```
-
-The image is published to GHCR as `ghcr.io/lntck/nexadesk:latest`.
 
 ## Local Development (without Docker)
 

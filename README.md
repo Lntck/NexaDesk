@@ -82,6 +82,16 @@ make migrate   # apply database migrations manually
 make clean     # stop the stack and drop data volumes
 ```
 
+## Deployment
+
+The same compose file deploys the product to a server:
+
+```bash
+docker compose up --build -d
+```
+
+Behind HTTPS set COOKIE_SECURE=true in .env and point CORS_ORIGINS at the public origin. All data lives in the postgres_data and redis_data volumes.
+
 ## Configuration
 
 All settings live in the .env file (git-ignored). The full annotated list is in [.env.template](.env.template).
