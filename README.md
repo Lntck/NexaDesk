@@ -9,7 +9,7 @@ NexaDesk lets teams organize work into projects, break it down into tasks, assig
 ```text
 .
 |- backend/     # Backend API (FastAPI, PostgreSQL, Redis) — see backend/README.md
-|- frontend/    # Web client (planned)
+|- frontend/    # Web client (React, Vite, TypeScript) — see frontend/PLAN.md
 |- README.md
 ```
 
@@ -40,6 +40,10 @@ are implemented and run via Docker Compose:
 - Async SQLAlchemy 2.0 + PostgreSQL, Redis
 - Health probes, rate limiting, centralized exception handling
 
+The web client in [`frontend/`](frontend/) covers the same surface: auth,
+projects and members, kanban board with drag and drop, task cards, comments
+with mentions, labels, watchers, notifications and live updates over SSE.
+
 ## Getting Started
 
 Prerequisites: Docker and Docker Compose.
@@ -58,6 +62,14 @@ docker compose exec app alembic upgrade head
 ```
 
 Then open Swagger UI at <http://127.0.0.1:8000/docs>.
+
+The web client needs Node.js and runs against the same stack:
+
+```bash
+cd frontend
+npm install
+npm run dev    # http://127.0.0.1:3000, /api is proxied to the backend
+```
 
 Makefile shortcuts are available in `backend/`:
 
