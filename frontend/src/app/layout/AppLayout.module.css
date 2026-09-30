@@ -1,0 +1,31 @@
+/* Application shell: fixed sidebar column and scrolling content area. */
+
+.shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.content {
+  flex: 1;
+  padding: var(--space-5) var(--space-6) var(--space-7);
+  overflow-y: auto;
+}
+
+.page {
+  max-width: 1360px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+@media (max-width: 900px) {
+  .content {
+    padding: var(--space-4);
+  }
+}

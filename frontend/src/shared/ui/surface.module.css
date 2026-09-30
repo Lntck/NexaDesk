@@ -1,0 +1,282 @@
+/* Glass surfaces: cards, panels, badges, avatars, tabs, lists and feedback blocks. */
+
+.card {
+  position: relative;
+  background-color: var(--color-surface-solid);
+  background-image: var(--color-reflection);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.cardInteractive {
+  cursor: pointer;
+  transition:
+    background-color var(--duration-quick) var(--ease-standard),
+    border-color var(--duration-quick) var(--ease-standard),
+    transform var(--duration-quick) var(--ease-standard);
+}
+
+.cardInteractive:hover {
+  background-color: var(--color-surface-hover);
+  border-color: var(--color-border-strong);
+}
+
+.cardInteractive:active {
+  background-color: var(--color-surface-active);
+  transform: translateY(1px);
+}
+
+.panel {
+  background-color: var(--color-surface-solid);
+  background-image: var(--color-reflection);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  backdrop-filter: blur(var(--blur-heavy));
+  -webkit-backdrop-filter: blur(var(--blur-heavy));
+}
+
+.panelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.panelTitle {
+  font-size: var(--font-size-16);
+  font-weight: var(--font-weight-semibold);
+}
+
+.panelBody {
+  padding: var(--space-5);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-border);
+  background-color: var(--color-surface);
+  font-size: var(--font-size-12);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.badgeAccent {
+  background-color: var(--color-accent-soft);
+  border-color: transparent;
+  color: var(--color-accent);
+}
+
+.badgeSuccess {
+  background-color: var(--color-success-soft);
+  border-color: transparent;
+  color: var(--color-success);
+}
+
+.badgeWarning {
+  background-color: var(--color-warning-soft);
+  border-color: transparent;
+  color: var(--color-warning);
+}
+
+.badgeDanger {
+  background-color: var(--color-danger-soft);
+  border-color: transparent;
+  color: var(--color-danger);
+}
+
+.badgeInfo {
+  background-color: var(--color-info-soft);
+  border-color: transparent;
+  color: var(--color-info);
+}
+
+.badgeMuted {
+  color: var(--color-text-muted);
+}
+
+.badgeDot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background-color: currentcolor;
+}
+
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-border-strong);
+  background:
+    radial-gradient(120% 120% at 30% 20%, rgba(255, 255, 255, 0.16), transparent 60%),
+    var(--color-accent-soft);
+  color: var(--color-text);
+  font-size: var(--font-size-12);
+  font-weight: var(--font-weight-semibold);
+  user-select: none;
+}
+
+.avatarSm {
+  width: 24px;
+  height: 24px;
+  font-size: 10px;
+}
+
+.avatarLg {
+  width: 48px;
+  height: 48px;
+  font-size: var(--font-size-16);
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-7) var(--space-5);
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+.emptyIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-border);
+  background-color: var(--color-surface);
+  color: var(--color-text-secondary);
+}
+
+.emptyTitle {
+  font-size: var(--font-size-16);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.emptyText {
+  max-width: 360px;
+  font-size: var(--font-size-13);
+}
+
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-xs);
+  background-color: var(--color-surface);
+}
+
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.06) 50%,
+    transparent 100%
+  );
+  animation: shimmer 1.6s infinite;
+}
+
+@keyframes shimmer {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+.spinner {
+  display: inline-block;
+  border-radius: var(--radius-pill);
+  border: 2px solid var(--color-border-strong);
+  border-top-color: var(--color-accent);
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.centered {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tabs {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+}
+
+.tab {
+  appearance: none;
+  border: none;
+  background: transparent;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-xs);
+  font-size: var(--font-size-13);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition:
+    background-color var(--duration-quick) var(--ease-standard),
+    color var(--duration-quick) var(--ease-standard);
+}
+
+.tab:hover {
+  color: var(--color-text-secondary);
+  background-color: var(--color-surface);
+}
+
+.tabActive {
+  color: var(--color-text);
+  background-color: var(--color-surface-active);
+  box-shadow: inset 0 1px 0 var(--color-highlight);
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-13);
+}
+
+.paginationButtons {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.divider {
+  height: 1px;
+  border: none;
+  background-color: var(--color-border);
+  margin: var(--space-4) 0;
+}

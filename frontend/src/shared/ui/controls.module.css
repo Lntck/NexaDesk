@@ -1,0 +1,236 @@
+/* Form controls and buttons: glass fields with soft focus glow. */
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  height: 36px;
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  font-size: var(--font-size-14);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color var(--duration-quick) var(--ease-standard),
+    border-color var(--duration-quick) var(--ease-standard),
+    filter var(--duration-quick) var(--ease-standard),
+    transform var(--duration-quick) var(--ease-standard);
+}
+
+.button:hover:not(:disabled) {
+  background-color: var(--color-surface-hover);
+  border-color: var(--color-border-strong);
+  filter: brightness(1.06);
+}
+
+.button:active:not(:disabled) {
+  background-color: var(--color-surface-active);
+  transform: translateY(1px);
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.buttonPrimary {
+  background-color: rgba(255, 255, 255, 0.92);
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0.84));
+  border-color: transparent;
+  color: var(--color-text-inverse);
+  box-shadow: var(--shadow-sm);
+}
+
+.buttonPrimary:hover:not(:disabled) {
+  background-color: #ffffff;
+  border-color: transparent;
+}
+
+.buttonAccent {
+  background-color: var(--color-accent-strong);
+  border-color: transparent;
+  color: #ffffff;
+  box-shadow: 0 4px 18px rgba(91, 140, 255, 0.28);
+}
+
+.buttonAccent:hover:not(:disabled) {
+  background-color: var(--color-accent-strong);
+  filter: brightness(1.1);
+}
+
+.buttonGhost {
+  background-color: transparent;
+  border-color: transparent;
+  color: var(--color-text-secondary);
+}
+
+.buttonGhost:hover:not(:disabled) {
+  background-color: var(--color-surface);
+  border-color: transparent;
+  color: var(--color-text);
+}
+
+.buttonDanger {
+  background-color: var(--color-danger-soft);
+  border-color: transparent;
+  color: var(--color-danger);
+}
+
+.buttonDanger:hover:not(:disabled) {
+  background-color: var(--color-danger-soft);
+  border-color: transparent;
+  filter: brightness(1.15);
+}
+
+.buttonSm {
+  height: 28px;
+  padding: 0 var(--space-3);
+  font-size: var(--font-size-13);
+  border-radius: var(--radius-xs);
+}
+
+.buttonLg {
+  height: 44px;
+  padding: 0 var(--space-5);
+  font-size: var(--font-size-16);
+}
+
+.buttonBlock {
+  width: 100%;
+}
+
+.buttonIcon {
+  width: 36px;
+  padding: 0;
+}
+
+.buttonIcon.buttonSm {
+  width: 28px;
+}
+
+.buttonIcon.buttonLg {
+  width: 44px;
+}
+
+.spinnerSlot {
+  display: inline-flex;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.label {
+  font-size: var(--font-size-13);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+}
+
+.required {
+  color: var(--color-danger);
+}
+
+.input,
+.textarea,
+.select {
+  width: 100%;
+  padding: 0 var(--space-3);
+  height: 36px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  font-size: var(--font-size-14);
+  transition:
+    border-color var(--duration-quick) var(--ease-standard),
+    box-shadow var(--duration-quick) var(--ease-standard),
+    background-color var(--duration-quick) var(--ease-standard);
+}
+
+.textarea {
+  height: auto;
+  min-height: 96px;
+  padding: var(--space-3);
+  line-height: var(--line-height-normal);
+  resize: vertical;
+}
+
+.select {
+  appearance: none;
+  cursor: pointer;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--color-text-muted) 50%),
+    linear-gradient(135deg, var(--color-text-muted) 50%, transparent 50%);
+  background-position:
+    calc(100% - 18px) calc(50% + 2px),
+    calc(100% - 13px) calc(50% + 2px);
+  background-size:
+    5px 5px,
+    5px 5px;
+  background-repeat: no-repeat;
+  padding-right: var(--space-6);
+}
+
+/* Native option list paints with system colors, so it needs explicit dark
+   colors or the light text stays invisible on the white popup. */
+.select option {
+  background-color: var(--color-bg-elevated);
+  color: var(--color-text);
+}
+
+.select option:checked {
+  background-color: var(--color-accent-strong);
+  color: #ffffff;
+}
+
+.input::placeholder,
+.textarea::placeholder {
+  color: var(--color-text-muted);
+}
+
+.input:hover,
+.textarea:hover,
+.select:hover {
+  border-color: var(--color-border-strong);
+}
+
+.input:focus,
+.textarea:focus,
+.select:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  background-color: var(--color-surface-hover);
+  box-shadow: var(--shadow-glow);
+}
+
+.input:disabled,
+.textarea:disabled,
+.select:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.invalid {
+  border-color: var(--color-danger);
+}
+
+.invalid:focus {
+  box-shadow: 0 0 0 3px var(--color-danger-soft);
+}
+
+.hint {
+  font-size: var(--font-size-12);
+  color: var(--color-text-muted);
+}
+
+.error {
+  font-size: var(--font-size-12);
+  color: var(--color-danger);
+}
