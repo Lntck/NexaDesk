@@ -134,15 +134,20 @@ class CommentService:
             ),
         )
         comment.author = await self._get_user(session, actor_id)
+        mentions = await self._resolve_mentions(session, data.body, actor_id)
         await self.activity.record(
             session,
             ActivityEventType.COMMENT_CREATED,
             actor_id,
             project_id=task.project_id,
             task_id=task.id,
-            data={"comment_id": comment.id, "task_key": task.key},
+            data={
+                "comment_id": comment.id,
+                "task_key": task.key,
+                "mentioned_user_ids": [user.id for user in mentions],
+            },
         )
-        await self._record_mentions(session, task, comment, actor_id)
+        await self._record_mentions(session, task, comment, mentions)
         return self._read(comment)
 
     async def update_comment(
@@ -184,15 +189,20 @@ class CommentService:
         comment.body = body
         comment.updated_at = utcnow()
         await self.comment_crud.update(session, comment)
+        mentions = await self._resolve_mentions(session, body, actor_id)
         await self.activity.record(
             session,
             ActivityEventType.COMMENT_UPDATED,
             actor_id,
             project_id=task.project_id,
             task_id=task.id,
-            data={"comment_id": comment.id, "task_key": task.key},
+            data={
+                "comment_id": comment.id,
+                "task_key": task.key,
+                "mentioned_user_ids": [user.id for user in mentions],
+            },
         )
-        await self._record_mentions(session, task, comment, actor_id)
+        await self._record_mentions(session, task, comment, mentions)
         return self._read(comment)
 
     async def delete_comment(
@@ -314,12 +324,35 @@ class CommentService:
             raise AccessDenied()
         return comment, task
 
+    async def _resolve_mentions(
+        self, session: AsyncSession, body: str, actor_id: int
+    ) -> list[User]:
+        """Resolve the accounts mentioned in a comment body.
+
+        Unknown usernames and self-mentions are ignored.
+
+        Args:
+            session: active database session.
+            body: comment body to scan.
+            actor_id: id of the comment author.
+
+        Returns:
+            list[User]: mentioned accounts in order of appearance.
+        """
+        mentions: list[User] = []
+        for username in self._mentioned_usernames(body):
+            user = await self.user_crud.get_by_username(session, username)
+            if user is None or user.id == actor_id:
+                continue
+            mentions.append(user)
+        return mentions
+
     async def _record_mentions(
         self,
         session: AsyncSession,
         task: Task,
         comment: Comment,
-        actor_id: int,
+        mentions: list[User],
     ) -> None:
         """Record a mention event for every mentioned account.
 
@@ -327,16 +360,13 @@ class CommentService:
             session: active database session.
             task: task owning the comment.
             comment: comment whose body was saved.
-            actor_id: id of the comment author.
+            mentions: accounts mentioned in the comment body.
         """
-        for username in self._mentioned_usernames(comment.body):
-            user = await self.user_crud.get_by_username(session, username)
-            if user is None or user.id == actor_id:
-                continue
+        for user in mentions:
             await self.activity.record(
                 session,
                 ActivityEventType.COMMENT_MENTIONED,
-                actor_id,
+                comment.author_id,
                 project_id=task.project_id,
                 task_id=task.id,
                 data={

@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
-from app.enums import ActivityEventType
+from app.enums import ActivityEventType, NotificationDeliveryType
 
 if TYPE_CHECKING:
     from app.models import ActivityEvent
@@ -24,14 +24,16 @@ class RealtimeEvent(BaseModel):
     The envelope is the ``data:`` payload of the SSE frame and carries the
     common fields from docs/api-endpoints.md, section 21: opaque id, event
     type, project and task scope, actor, timestamp and the event specific
-    attributes under ``data``.
+    attributes under ``data``. Notification frames carry the recipient
+    under ``recipient_id`` and reach only that user.
     """
 
     id: str
-    type: ActivityEventType
+    type: ActivityEventType | NotificationDeliveryType
     project_id: int | None = None
     task_id: int | None = None
     actor: EventActor | None = None
+    recipient_id: int | None = None
     timestamp: datetime
     data: dict[str, Any] = Field(default_factory=dict)
 

@@ -9,7 +9,7 @@ database session and published strictly after commit.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Protocol
+from typing import TYPE_CHECKING, Any, Protocol, Sequence
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from uuid_utils import uuid7
@@ -35,6 +35,7 @@ class DomainEvent:
         task_id: task the event belongs to, None when not task scoped.
         actor_id: id of the user who caused the event.
         data: free-form payload with event specific attributes.
+        notifications: recipient-scoped notices created for this event.
     """
 
     type: str
@@ -43,6 +44,20 @@ class DomainEvent:
     task_id: int | None = None
     actor_id: int | None = None
     data: dict[str, Any] = field(default_factory=dict)
+    notifications: tuple[NotificationDelivery, ...] = ()
+
+
+@dataclass(frozen=True)
+class NotificationDelivery:
+    """One recipient-scoped notification attached to a domain event.
+
+    Attributes:
+        user_id: id of the user the notification belongs to.
+        payload: rendered notification, sent as the frame data.
+    """
+
+    user_id: int
+    payload: dict[str, Any] = field(default_factory=dict)
 
 
 class EventPublisher(Protocol):
@@ -71,6 +86,25 @@ class NoopPublisher:
             event: event that would be delivered.
         """
         return None
+
+
+class EventReactor(Protocol):
+    """Recipient-scoped side effects of recorded activity."""
+
+    async def react(
+        self, session: AsyncSession, event: ActivityEvent
+    ) -> Sequence[NotificationDelivery]:
+        """React to one recorded activity entry inside its transaction.
+
+        Args:
+            session: active database session.
+            event: activity entry that was just recorded.
+
+        Returns:
+            Sequence[NotificationDelivery]: notices to deliver after
+            commit, one per recipient.
+        """
+        ...
 
 
 def queue_event(session: AsyncSession | None, event: DomainEvent) -> None:
@@ -117,16 +151,19 @@ class ActivityLog:
 
     Every record lands in the current transaction and queues a matching
     DomainEvent published after commit, so the history and the realtime
-    feed stay consistent.
+    feed stay consistent. The optional reactor creates recipient-scoped
+    side effects (notifications) in the same transaction.
     """
 
-    def __init__(self, crud: ActivityCRUDProtocol):
-        """Attach the activity storage.
+    def __init__(self, crud: ActivityCRUDProtocol, reactor: EventReactor | None = None):
+        """Attach the activity storage and the optional reactor.
 
         Args:
             crud: activity history storage.
+            reactor: side effects created for recorded entries.
         """
         self.crud = crud
+        self.reactor = reactor
 
     async def record(
         self,
@@ -161,6 +198,9 @@ class ActivityLog:
             created_at=utcnow(),
         )
         stored = await self.crud.create_event(session, event)
+        notifications: Sequence[NotificationDelivery] = ()
+        if self.reactor is not None:
+            notifications = await self.reactor.react(session, stored)
         queue_event(
             session,
             DomainEvent(
@@ -170,6 +210,7 @@ class ActivityLog:
                 task_id=task_id,
                 actor_id=actor_id,
                 data=payload,
+                notifications=tuple(notifications),
             ),
         )
         return stored

@@ -174,6 +174,9 @@ class ConnectionManager:
 async def _feed_events(connection: StreamConnection, pubsub: PubSub) -> None:
     """Pump live broker messages into the stream queue.
 
+    Notification frames are addressed to one user and are dropped for
+    every other stream of the project.
+
     Args:
         connection: stream to feed.
         pubsub: subscribed Redis Pub/Sub handle.
@@ -188,6 +191,11 @@ async def _feed_events(connection: StreamConnection, pubsub: PubSub) -> None:
                 event = RealtimeEvent.model_validate_json(payload)
             except Exception:
                 logger.warning("dropping malformed realtime event: %r", payload)
+                continue
+            if (
+                event.recipient_id is not None
+                and event.recipient_id != connection.user_id
+            ):
                 continue
             if not connection.enqueue(sse_frame(event)):
                 return
