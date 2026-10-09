@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: nexadesk
+  labels:
+    app.kubernetes.io/name: nexadesk
+    app.kubernetes.io/component: frontend
+spec:
+  clusterIP: None
+  selector:
+    app.kubernetes.io/name: nexadesk
+    app.kubernetes.io/component: frontend
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
