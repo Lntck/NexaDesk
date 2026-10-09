@@ -7,7 +7,6 @@ metadata:
     app.kubernetes.io/name: nexadesk
     app.kubernetes.io/component: frontend
 spec:
-  clusterIP: None
   selector:
     app.kubernetes.io/name: nexadesk
     app.kubernetes.io/component: frontend

@@ -26,9 +26,9 @@ spec:
           ports:
             - name: http
               containerPort: 80
-          envFrom:
-            - configMapRef:
-                name: app-config
+          env:
+            - name: API_UPSTREAM
+              value: backend:8000
           resources:
             requests:
               cpu: "50m"
