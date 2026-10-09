@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  namespace: nexadesk
+  labels:
+    app.kubernetes.io/name: nexadesk
+    app.kubernetes.io/component: backend
+spec:
+  selector:
+    app.kubernetes.io/name: nexadesk
+    app.kubernetes.io/component: backend
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http
