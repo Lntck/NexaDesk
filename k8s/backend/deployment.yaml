@@ -26,12 +26,25 @@ spec:
             - sh
             - -c
             - |
-                echo "waiting for migrations to reach head..."
-                until alembic current 2>/dev/null | grep -q "(head)";
-                do
-                  sleep 3
-                done
-                echo "migrations applied, starting backend"
+              set -u
+              attempts=0
+              max_attempts=200
+              head="${EXPECTED_REVISION:-$(alembic heads 2>/dev/null | head -n1 | awk '{print $1}')}"
+              echo "[wait-for-migrations] target revision: $head"
+              while true; do
+                current=$(alembic current 2>/dev/null | awk '{print $1}')
+                if [ -n "$head" ] && [ "$current" = "$head" ]; then
+                  echo "[wait-for-migrations] schema at $current, starting backend"
+                  exit 0
+                fi
+                attempts=$((attempts + 1))
+                if [ "$attempts" -ge "$max_attempts" ]; then
+                  echo "[wait-for-migrations] deadline exceeded: current=${current:-none}, target=$head" >&2
+                  exit 1
+                fi
+                echo "[wait-for-migrations] current=${current:-none}, waiting for $head"
+                sleep 3
+              done
           envFrom:
             - configMapRef:
                 name: app-config
