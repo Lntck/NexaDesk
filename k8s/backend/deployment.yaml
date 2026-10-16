@@ -27,22 +27,25 @@ spec:
             - -c
             - |
               set -u
+              log() {
+                printf '{"timestamp":"%s","level":"%s","message":"%s","service.name":"nexadesk-backend","component":"wait-for-migrations"}\n' "$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)" "$1" "$2"
+              }
               attempts=0
               max_attempts=200
               head="${EXPECTED_REVISION:-$(alembic heads 2>/dev/null | head -n1 | awk '{print $1}')}"
-              echo "[wait-for-migrations] target revision: $head"
+              log INFO "target revision: $head"
               while true; do
                 current=$(alembic current 2>/dev/null | awk '{print $1}')
                 if [ -n "$head" ] && [ "$current" = "$head" ]; then
-                  echo "[wait-for-migrations] schema at $current, starting backend"
+                  log INFO "schema at $current, starting backend"
                   exit 0
                 fi
                 attempts=$((attempts + 1))
                 if [ "$attempts" -ge "$max_attempts" ]; then
-                  echo "[wait-for-migrations] deadline exceeded: current=${current:-none}, target=$head" >&2
+                  log ERROR "deadline exceeded: current=${current:-none}, target=$head"
                   exit 1
                 fi
-                echo "[wait-for-migrations] current=${current:-none}, waiting for $head"
+                log INFO "current=${current:-none}, waiting for $head"
                 sleep 3
               done
           envFrom:
@@ -62,6 +65,11 @@ spec:
                 name: app-config
             - secretRef:
                 name: app-secrets
+          env:
+            - name: K8S_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
           readinessProbe:
             httpGet:
               path: /health/ready

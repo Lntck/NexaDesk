@@ -28,6 +28,10 @@ data:
   # FastAPI
   DEBUG: "false"
 
+  # Logging
+  DEPLOYMENT_ENVIRONMENT_NAME: "dev"
+  LOG_LEVEL: "INFO"
+
   # Realtime (SSE)
   SSE_HEARTBEAT_S: "15"
   SSE_IDLE_TIMEOUT_S: "300"
