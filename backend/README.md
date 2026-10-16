@@ -283,6 +283,11 @@ Configuration is loaded from a `.env` file via Pydantic Settings.
 | `COOKIE_SAMESITE` | No | One of `lax`, `strict`, `none` |
 | `SSE_HEARTBEAT_S` | No | Heartbeat comment interval in seconds (default: `15`) |
 | `SSE_IDLE_TIMEOUT_S` | No | Retire streams without progress after this many seconds (default: `300`) |
+| `LOG_LEVEL` | No | Root level of the structured JSON log (default: `INFO`) |
+| `SERVICE_NAME` | No | `service.name` field of every log record (default: `nexadesk-backend`) |
+| `SERVICE_VERSION` | No | `service.version` field and API version (default: `1.2.0`) |
+| `DEPLOYMENT_ENVIRONMENT_NAME` | No | `deployment.environment.name` field (default: `local`) |
+| `K8S_POD_NAME` | No | `k8s.pod.name` field, set automatically via the downward API |
 | `SSE_MAX_QUEUED_EVENTS` | No | Per-stream queue bound before forced disconnect (default: `10000`) |
 | `SSE_REPLAY_LIMIT` | No | Maximum replayed events per reconnect (default: `500`) |
 
