@@ -21,7 +21,7 @@ spec:
 
       containers:
         - name: frontend
-          image: nexadesk-frontend:v1.0.0
+          image: nexadesk-frontend:v1.1.0
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
@@ -38,13 +38,13 @@ spec:
               memory: "128Mi"
           readinessProbe:
             httpGet:
-              path: /
+              path: /healthz
               port: 80
             initialDelaySeconds: 3
             periodSeconds: 10
           livenessProbe:
             httpGet:
-              path: /
+              path: /healthz
               port: 80
             initialDelaySeconds: 10
             periodSeconds: 20
