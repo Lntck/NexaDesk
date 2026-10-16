@@ -4,6 +4,8 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from slowapi.errors import RateLimitExceeded
 
+from app.core.logger import logger
+
 from .custom import AppException
 
 
@@ -42,6 +44,16 @@ def register_exception_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(Exception)
     async def handle_any_exception(request: Request, exc: Exception):
+        """Log the failure and answer with the internal error envelope.
+
+        Args:
+            request: request being processed.
+            exc: unhandled exception raised by the application.
+
+        Returns:
+            JSONResponse: 500 response with the contract envelope.
+        """
+        logger.error("unhandled error while processing request", exc_info=exc)
         return JSONResponse(
             status_code=500,
             content={"detail": "Internal server error", "code": "internal_error"},

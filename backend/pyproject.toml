@@ -22,6 +22,7 @@ asyncpg = "^0.31.0"
 redis = "^7.4.0"
 uuid-utils = "^1.0.0"
 sse-starlette = "^3.5.0"
+structlog = "^26.1.0"
 
 [tool.poetry.group.dev.dependencies]
 black = "^26.3.1"

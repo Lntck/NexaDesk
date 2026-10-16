@@ -190,7 +190,10 @@ async def _feed_events(connection: StreamConnection, pubsub: PubSub) -> None:
             try:
                 event = RealtimeEvent.model_validate_json(payload)
             except Exception:
-                logger.warning("dropping malformed realtime event: %r", payload)
+                logger.warning(
+                    "dropping malformed realtime event",
+                    payload_bytes=len(payload),
+                )
                 continue
             if (
                 event.recipient_id is not None
@@ -202,7 +205,7 @@ async def _feed_events(connection: StreamConnection, pubsub: PubSub) -> None:
     except asyncio.CancelledError:
         raise
     except Exception as exc:
-        logger.warning("realtime feed stopped: %s", exc)
+        logger.warning("realtime feed stopped", exc_info=exc)
         connection.request_close()
 
 
@@ -265,7 +268,9 @@ async def project_event_stream(
             feeder = asyncio.create_task(_feed_events(connection, pubsub))
         except Exception as exc:
             logger.warning(
-                "realtime broker unavailable for project %s: %s", project_id, exc
+                "realtime broker unavailable",
+                project_id=project_id,
+                exc_info=exc,
             )
         watchdog = asyncio.create_task(_watch_idle(connection, idle_timeout_s))
 
