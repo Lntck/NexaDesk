@@ -35,7 +35,7 @@ spec:
                 name: app-secrets
       containers:
         - name: migrate
-          image: nexadesk-backend:v1.2.0
+          image: nexadesk-backend:v1.3.0
           imagePullPolicy: IfNotPresent
           command: ["alembic", "upgrade", "head"]
           envFrom:
