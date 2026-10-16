@@ -25,10 +25,9 @@ spec:
         - name: vlagent
           image: victoriametrics/vlagent:v1.53.0
           args:
-            - "-remoteWrite.url=http://victorialogs.logging.svc.cluster.local:9428/insert/native"
-            - "-remoteWrite.tmpDataPath=/vlagent-buffer"
             - "-kubernetesCollector"
-            - "-kubernetesCollector.checkpointsPath=/vlagent-buffer/checkpoints.json"
+            - "-remoteWrite.url=http://victorialogs.logging.svc.cluster.local:9428/insert/native"
+            - "-tmpDataPath=/var/lib/vlagent"
           securityContext:
             capabilities:
               add: ["DAC_READ_SEARCH"]
@@ -43,15 +42,23 @@ spec:
             - name: varlog
               mountPath: /var/log
               readOnly: true
+            - name: varlib
+              mountPath: /var/lib
+              readOnly: true
             - name: buffer
-              mountPath: /vlagent-buffer
+              mountPath: /var/lib/vlagent
       volumes:
         - name: varlog
           hostPath:
             path: /var/log
             type: Directory
+        - name: varlib
+          hostPath:
+            path: /var/lib
+            type: Directory
         - name: buffer
-          emptyDir: {}
+          hostPath:
+            path: /var/lib/vlagent
+            type: DirectoryOrCreate
       tolerations:
-        - effect: NoSchedule
-          operator: Exists
+        - operator: Exists
