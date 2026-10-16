@@ -21,6 +21,8 @@ spec:
       securityContext:
         runAsUser: 0
         runAsGroup: 0
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: vlagent
           image: victoriametrics/vlagent:v1.53.0
@@ -28,8 +30,11 @@ spec:
             - "-kubernetesCollector"
             - "-remoteWrite.url=http://victorialogs.logging.svc.cluster.local:9428/insert/native"
             - "-tmpDataPath=/var/lib/vlagent"
+            - "-remoteWrite.maxDiskUsagePerURL=2097152000"
           securityContext:
+            readOnlyRootFilesystem: true
             capabilities:
+              drop: ["ALL"]
               add: ["DAC_READ_SEARCH"]
           resources:
             requests:
@@ -42,23 +47,26 @@ spec:
             - name: varlog
               mountPath: /var/log
               readOnly: true
-            - name: varlib
-              mountPath: /var/lib
+            - name: dockerlogs
+              mountPath: /var/lib/docker/containers
               readOnly: true
             - name: buffer
               mountPath: /var/lib/vlagent
+            - name: tmp
+              mountPath: /tmp
       volumes:
         - name: varlog
           hostPath:
             path: /var/log
             type: Directory
-        - name: varlib
+        - name: dockerlogs
           hostPath:
-            path: /var/lib
-            type: Directory
+            path: /var/lib/docker/containers
         - name: buffer
           hostPath:
             path: /var/lib/vlagent
             type: DirectoryOrCreate
+        - name: tmp
+          emptyDir: {}
       tolerations:
         - operator: Exists
