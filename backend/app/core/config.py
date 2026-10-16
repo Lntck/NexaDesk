@@ -4,9 +4,15 @@ from typing import Literal
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from app.core.constants import SERVICE_NAME, SERVICE_VERSION
+
 
 class Settings(BaseSettings):
     debug: bool = False
+    service_name: str = SERVICE_NAME
+    service_version: str = SERVICE_VERSION
+    deployment_environment_name: str = "local"
+    log_level: str = "INFO"
     cors_origins: list[str] = [
         "http://localhost",
         "http://localhost:8000",

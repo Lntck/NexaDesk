@@ -118,7 +118,12 @@ class RedisPublisher:
                 frame = self._notification_frame(envelope, delivery)
                 await self.client.publish(channel, frame.model_dump_json())
         except Exception as exc:
-            logger.warning("event publish failed for %s: %s", event.type, exc)
+            logger.warning(
+                "event publish failed",
+                event_type=event.type,
+                project_id=event.project_id,
+                exc_info=exc,
+            )
 
     @staticmethod
     def _notification_frame(

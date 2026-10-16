@@ -107,6 +107,9 @@ All settings live in the .env file (git-ignored). The full annotated list is in 
 * CORS_ORIGINS: JSON array of origins allowed to call the API directly
 * DEBUG: FastAPI debug mode
 * SSE_HEARTBEAT_S, SSE_IDLE_TIMEOUT_S, SSE_MAX_QUEUED_EVENTS, SSE_REPLAY_LIMIT: realtime stream tuning
+* LOG_LEVEL: root log level for the structured JSON log (default INFO)
+* SERVICE_NAME, SERVICE_VERSION, DEPLOYMENT_ENVIRONMENT_NAME: service identity fields attached to every log record
+* K8S_POD_NAME: pod name for log records, set automatically via the downward API in Kubernetes
 * WEB_PORT, API_PORT: host ports published by Docker Compose
 
 The API validates the configuration on startup and refuses to run with missing or default secrets.
@@ -138,6 +141,10 @@ cd backend && poetry run pytest     # unit tests
 cd frontend && npm run typecheck    # TypeScript
 cd frontend && npm run lint         # ESLint
 ```
+
+## Logging
+
+The backend emits structured JSON logs to stdout, one JSON object per line. Every record carries timestamp (ISO 8601, UTC, milliseconds), level and severity_number, message, service.name, service.version, deployment.environment.name, host.name, k8s.pod.name, request_id and trace_id, plus duration_ms and error.message / error.stack where they make sense. Each HTTP request produces a single access event (method, path, status_code, duration_ms, user_id), probes under /health are skipped. The response header X-Request-Id echoes the request id so a client can join its own logs to the request trace. Uvicorn access log is disabled in favour of the middleware event. Secrets, connection string credentials, tokens and card numbers are scrubbed or masked before rendering, session identifiers are logged as hashes.
 
 ## API Documentation
 
