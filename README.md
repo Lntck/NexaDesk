@@ -146,6 +146,14 @@ cd frontend && npm run lint         # ESLint
 
 The backend emits structured JSON logs to stdout, one JSON object per line. Every record carries timestamp (ISO 8601, UTC, milliseconds), level and severity_number, message, service.name, service.version, deployment.environment.name, host.name, k8s.pod.name, request_id and trace_id, plus duration_ms and error.message / error.stack where they make sense. Each HTTP request produces a single access event (method, path, status_code, duration_ms, user_id), probes under /health are skipped. The response header X-Request-Id echoes the request id so a client can join its own logs to the request trace. Uvicorn access log is disabled in favour of the middleware event. Secrets, connection string credentials, tokens and card numbers are scrubbed or masked before rendering, session identifiers are logged as hashes.
 
+## Monitoring and alerting
+
+Container logs from every node are shipped by the vlagent DaemonSet (namespace logging) into single-node VictoriaLogs, so all JSON fields stay queryable with LogsQL. The monitoring stack lives in k8s/monitoring.
+
+* Grafana with the official VictoriaLogs datasource plugin (victoriametrics-logs-datasource), provisioned from a ConfigMap together with log level rules. Access: kubectl port-forward svc/grafana -n logging 3000:3000 (admin/admin), then Explore -> VictoriaLogs.
+* vmalert evaluates LogsQL rules (group type vlogs) every minute: BackendErrors fires on ERROR records from the backend, DbRoleErrors watches postgres "role does not exist" failures on db-0. UI: kubectl port-forward svc/vmalert -n logging 8880:8880, page /vmalert.
+* Alertmanager receives fired alerts; a real receiver (webhook, mail) is configured in k8s/monitoring/alertmanager-config.yaml. UI: kubectl port-forward svc/alertmanager -n logging 9093:9093.
+
 ## API Documentation
 
 * Swagger UI: http://localhost:8000/docs, ReDoc: http://localhost:8000/redoc
