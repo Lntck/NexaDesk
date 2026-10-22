@@ -1,0 +1,17 @@
+apiVersion: v2
+name: nexadesk-app
+description: NexaDesk umbrella chart (backend + frontend)
+type: application
+version: 0.1.0
+appVersion: "v1.3.0"
+
+dependencies:
+  - name: backend
+    version: 0.1.0
+    repository: "file://./charts/backend"
+    condition: backend.enabled
+
+  - name: frontend
+    version: 0.1.0
+    repository: "file://./charts/frontend"
+    condition: frontend.enabled

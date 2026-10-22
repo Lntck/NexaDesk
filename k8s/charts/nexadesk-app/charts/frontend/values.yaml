@@ -1,0 +1,75 @@
+replicaCount: 1
+
+fullnameOverride: frontend
+
+image:
+  repository: nexadesk-frontend
+  tag: v1.1.0
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+service:
+  type: ClusterIP
+  port: 8080
+  targetPort: http
+
+containerPort: 80
+
+apiUpstream: "backend:8000"
+
+env: []
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 200m
+    memory: 128Mi
+
+livenessProbe:
+  httpGet:
+    path: /healthz
+    port: http
+  initialDelaySeconds: 10
+  periodSeconds: 20
+
+readinessProbe:
+  httpGet:
+    path: /healthz
+    port: http
+  initialDelaySeconds: 3
+  periodSeconds: 10
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 70
+
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1
+
+podSecurityContext: {}
+#  runAsNonRoot: true
+#  runAsUser: 101
+#  runAsGroup: 101
+#  fsGroup: 101
+#  seccompProfile:
+#    type: RuntimeDefault
+
+containerSecurityContext: {}
+#  allowPrivilegeEscalation: false
+#  readOnlyRootFilesystem: true
+#  capabilities:
+#    drop: ["ALL"]
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+topologySpreadConstraints: []
+
+podAnnotations: {}
+podLabels: {}

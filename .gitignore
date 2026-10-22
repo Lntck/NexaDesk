@@ -4,7 +4,6 @@
 !.env.template
 !.env.example
 *.env.local
-secrets/
 *.pem
 *.key
 
@@ -123,3 +122,10 @@ playwright/.cache/
 cookies.txt
 *.har
 .DS_Store
+
+k8s/secrets/*.yaml
+
+charts/*/charts/*.tgz
+charts/*/Chart.lock
+
+*.local.yaml

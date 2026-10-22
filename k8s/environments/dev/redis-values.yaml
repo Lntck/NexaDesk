@@ -1,0 +1,23 @@
+architecture: standalone
+
+auth:
+  enabled: true
+  existingSecret: app-secrets
+  existingSecretPasswordKey: REDIS_PASSWORD
+
+master:
+  persistence:
+    enabled: true
+    size: 1Gi
+
+resources:
+  requests:
+    memory: 128Mi
+    cpu: 100m
+  limits:
+    memory: 256Mi
+    cpu: 250m
+
+commonLabels:
+  app.kubernetes.io/part-of: nexadesk
+  app.kubernetes.io/component: redis
