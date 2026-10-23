@@ -5,8 +5,12 @@ from fastapi.responses import JSONResponse
 from slowapi.errors import RateLimitExceeded
 
 from app.core.logger import logger
+from app.core.metrics import observe_auth_attempt
 
 from .custom import AppException
+
+#: Rate limited endpoints that count as authentication attempts.
+AUTH_ATTEMPT_SUFFIXES = ("/register", "/login", "/refresh", "/logout")
 
 
 def register_exception_handlers(app: FastAPI) -> None:
@@ -19,6 +23,17 @@ def register_exception_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(RateLimitExceeded)
     async def handle_rate_limit(request: Request, exc: RateLimitExceeded):
+        """Answer a throttled request and count the auth attempt.
+
+        Args:
+            request: throttled request.
+            exc: rate limit error.
+
+        Returns:
+            JSONResponse: 429 response with the contract envelope.
+        """
+        if request.url.path.endswith(AUTH_ATTEMPT_SUFFIXES):
+            observe_auth_attempt("rate_limited")
         return JSONResponse(
             status_code=429,
             content={"detail": "Rate limit exceeded", "code": "rate_limited"},

@@ -4,6 +4,7 @@ import re
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.metrics import observe_comment_created
 from app.enums import ActivityEventType, ProjectRole, Role
 from app.exceptions import (
     AccessDenied,
@@ -148,6 +149,7 @@ class CommentService:
             },
         )
         await self._record_mentions(session, task, comment, mentions)
+        observe_comment_created(bool(mentions))
         return self._read(comment)
 
     async def update_comment(

@@ -14,6 +14,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, AsyncGenerator, Sequence
 
 from app.core.logger import logger
+from app.core.metrics import set_active_sse_streams
 from app.events.sse import HEARTBEAT_FRAME, project_channel, sse_frame
 from app.schemas.event import RealtimeEvent
 
@@ -136,6 +137,7 @@ class ConnectionManager:
             max_queued_events=max_queued_events,
         )
         self._streams[(user_id, project_id)] = connection
+        set_active_sse_streams(self.count())
         return connection
 
     def unregister(self, connection: StreamConnection) -> None:
@@ -149,6 +151,7 @@ class ConnectionManager:
         key = (connection.user_id, connection.project_id)
         if self._streams.get(key) is connection:
             del self._streams[key]
+        set_active_sse_streams(self.count())
 
     def get(self, user_id: int, project_id: int) -> StreamConnection | None:
         """Return the open stream of one client in one project.

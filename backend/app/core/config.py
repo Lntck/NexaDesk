@@ -30,6 +30,9 @@ class Settings(BaseSettings):
     sse_idle_timeout_s: float = 300  # retire streams silent for 5 minutes
     sse_max_queued_events: int = 10000  # per-stream queue bound
     sse_replay_limit: int = 500  # max replayed events per reconnect
+    metrics_enabled: bool = True  # serve /metrics on the dedicated port
+    metrics_host: str = "0.0.0.0"  # metrics endpoint bind address
+    metrics_port: int = 9100  # metrics endpoint port
 
     @field_validator("database_url")
     @classmethod

@@ -137,6 +137,24 @@ class FakeTaskCRUD:
         """
         return len(await self.list_in_status(session, project_id, status_id, None))
 
+    async def count_overdue(self, session, today) -> int:
+        """Count live tasks whose due date has passed.
+
+        Args:
+            session: unused session placeholder.
+            today: current date to compare the due date against.
+
+        Returns:
+            int: number of live tasks overdue at the given date.
+        """
+        return sum(
+            1
+            for task in self.store.tasks.values()
+            if task.deleted_at is None
+            and task.due_date is not None
+            and task.due_date < today
+        )
+
     async def next_rank(self, session, project_id: int, status_id: int) -> int:
         """Return the rank following the last card of a board column.
 

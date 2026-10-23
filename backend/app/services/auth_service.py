@@ -4,7 +4,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.schemas import CurrentUser
 from app.core import JWTManager, Settings, verify_password
-from app.exceptions import InvalidCredentials, TokenInvalidError, UserNotFound
+from app.core.metrics import observe_auth_attempt
+from app.exceptions import (
+    InvalidCredentials,
+    TokenExpiredError,
+    TokenInvalidError,
+    UserNotFound,
+)
 from app.services.user_service import UserService
 
 
@@ -72,33 +78,45 @@ class AuthService:
             InvalidCredentials: when the account is unknown, deactivated
                 or the password does not match.
         """
+        result = "error"
         try:
-            user = await self.user_service.get_by_username(session, username)
-        except UserNotFound:
-            raise InvalidCredentials()
+            try:
+                user = await self.user_service.get_by_username(session, username)
+            except UserNotFound:
+                raise InvalidCredentials()
 
-        if not user.is_active:
-            raise InvalidCredentials()
+            if not user.is_active:
+                raise InvalidCredentials()
 
-        if not verify_password(password, user.password_hash):
-            raise InvalidCredentials()
+            if not verify_password(password, user.password_hash):
+                raise InvalidCredentials()
 
-        access_token, _ = self.jwt_manager.create_token(
-            {"sub": str(user.id), "role": user.role, "type": self.ACCESS_TOKEN_TYPE},
-            self.settings.access_secret,
-            self.settings.access_token_expire_m,
-        )
-        refresh_token, ref_jti = self.jwt_manager.create_token(
-            {"sub": str(user.id), "type": self.REFRESH_TOKEN_TYPE},
-            self.settings.refresh_secret,
-            self.settings.refresh_token_expire_m,
-        )
+            access_token, _ = self.jwt_manager.create_token(
+                {
+                    "sub": str(user.id),
+                    "role": user.role,
+                    "type": self.ACCESS_TOKEN_TYPE,
+                },
+                self.settings.access_secret,
+                self.settings.access_token_expire_m,
+            )
+            refresh_token, ref_jti = self.jwt_manager.create_token(
+                {"sub": str(user.id), "type": self.REFRESH_TOKEN_TYPE},
+                self.settings.refresh_secret,
+                self.settings.refresh_token_expire_m,
+            )
 
-        await redis_client.setex(
-            f"rft:{ref_jti}", self.settings.refresh_token_expire_m * 60, "valid"
-        )
+            await redis_client.setex(
+                f"rft:{ref_jti}", self.settings.refresh_token_expire_m * 60, "valid"
+            )
+            result = "success"
 
-        return access_token, refresh_token
+            return access_token, refresh_token
+        except InvalidCredentials:
+            result = "invalid_credentials"
+            raise
+        finally:
+            observe_auth_attempt(result)
 
     async def refresh_token(
         self,
@@ -120,39 +138,51 @@ class AuthService:
             TokenInvalidError: when the token is unknown, already used,
                 belongs to a missing or deactivated account.
         """
-        payload = self.jwt_manager.decode_token(
-            refresh_token, self.settings.refresh_secret
-        )
-        user_id, token_jti = self._validate_token_payload(
-            payload, self.REFRESH_TOKEN_TYPE, "Invalid refresh token"
-        )
-
-        await self._consume_refresh_token(redis_client, token_jti)
-
+        result = "error"
         try:
-            user = await self.user_service.get_by_id(session, user_id)
-        except UserNotFound:
-            raise TokenInvalidError("Refresh token is invalid")
+            payload = self.jwt_manager.decode_token(
+                refresh_token, self.settings.refresh_secret
+            )
+            user_id, token_jti = self._validate_token_payload(
+                payload, self.REFRESH_TOKEN_TYPE, "Invalid refresh token"
+            )
 
-        if not user.is_active:
-            raise TokenInvalidError("Refresh token is invalid")
+            await self._consume_refresh_token(redis_client, token_jti)
 
-        new_access_token, _ = self.jwt_manager.create_token(
-            {"sub": str(user.id), "role": user.role, "type": self.ACCESS_TOKEN_TYPE},
-            self.settings.access_secret,
-            self.settings.access_token_expire_m,
-        )
-        new_refresh_token, new_ref_jti = self.jwt_manager.create_token(
-            {"sub": str(user.id), "type": self.REFRESH_TOKEN_TYPE},
-            self.settings.refresh_secret,
-            self.settings.refresh_token_expire_m,
-        )
+            try:
+                user = await self.user_service.get_by_id(session, user_id)
+            except UserNotFound:
+                raise TokenInvalidError("Refresh token is invalid")
 
-        await redis_client.setex(
-            f"rft:{new_ref_jti}", self.settings.refresh_token_expire_m * 60, "valid"
-        )
+            if not user.is_active:
+                raise TokenInvalidError("Refresh token is invalid")
 
-        return new_access_token, new_refresh_token
+            new_access_token, _ = self.jwt_manager.create_token(
+                {
+                    "sub": str(user.id),
+                    "role": user.role,
+                    "type": self.ACCESS_TOKEN_TYPE,
+                },
+                self.settings.access_secret,
+                self.settings.access_token_expire_m,
+            )
+            new_refresh_token, new_ref_jti = self.jwt_manager.create_token(
+                {"sub": str(user.id), "type": self.REFRESH_TOKEN_TYPE},
+                self.settings.refresh_secret,
+                self.settings.refresh_token_expire_m,
+            )
+
+            await redis_client.setex(
+                f"rft:{new_ref_jti}", self.settings.refresh_token_expire_m * 60, "valid"
+            )
+            result = "success"
+
+            return new_access_token, new_refresh_token
+        except (TokenInvalidError, TokenExpiredError):
+            result = "invalid_token"
+            raise
+        finally:
+            observe_auth_attempt(result)
 
     async def remove_refresh_token(
         self,
