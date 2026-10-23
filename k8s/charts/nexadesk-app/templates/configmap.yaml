@@ -32,3 +32,7 @@ data:
   SSE_IDLE_TIMEOUT_S: {{ .Values.config.sseIdleTimeoutS | default 300 | quote }}
   SSE_MAX_QUEUED_EVENTS: {{ .Values.config.sseMaxQueuedEvents | default 10000 | quote }}
   SSE_REPLAY_LIMIT: {{ .Values.config.sseReplayLimit | default 500 | quote }}
+
+  METRICS_ENABLED: {{ .Values.config.metricsEnabled | default "true" | quote }}
+  METRICS_HOST: {{ .Values.config.metricsHost | default "0.0.0.0" | quote }}
+  METRICS_PORT: {{ .Values.config.metricsPort | default 9100 | quote }}

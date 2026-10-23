@@ -277,7 +277,9 @@ periodically and stores centrally.
 * Format: OpenMetrics 1.0.0 by default; an Accept header explicitly asking for
   `text/plain` gets the classic Prometheus text format
 * Auth: none on purpose, access control is a network level concern. The port
-  must be reachable for the monitoring system only (firewall, NetworkPolicy)
+  must be reachable for the monitoring system only (firewall, NetworkPolicy;
+  the chart in `k8s/` ships a NetworkPolicy admitting only the monitoring
+  namespaces)
 * Request metrics skip scrapes and probes, so monitoring traffic does not
   distort the rows
 
@@ -320,14 +322,16 @@ A failed overdue snapshot keeps the last published value instead of dropping to
 zero. Board columns are free-form, so tasks in a finished column stay in the
 gauge until their due date is cleared or the task is deleted.
 
-Example scrape job for vmagent or Prometheus:
+Example scrape job for vmagent or Prometheus. In the cluster the endpoint sits
+behind the `backend-metrics` Service (`nexadesk` namespace); locally Docker
+Compose publishes the same port on the host.
 
 ```yaml
 - job_name: nexadesk-backend
   metrics_path: /metrics
   scrape_interval: 15s
   static_configs:
-    - targets: ["nexadesk-backend:9100"]
+    - targets: ["backend-metrics.nexadesk.svc:9100"]
 ```
 
 ## Configuration

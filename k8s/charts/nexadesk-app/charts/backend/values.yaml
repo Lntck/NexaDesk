@@ -20,6 +20,14 @@ service:
   type: ClusterIP
   port: 8000
 
+metrics:
+  enabled: true
+  port: 9100
+  networkPolicy:
+    enabled: true
+    scrapeNamespaces:
+      - observability
+
 livenessProbe:
   httpGet:
     path: /health/live
