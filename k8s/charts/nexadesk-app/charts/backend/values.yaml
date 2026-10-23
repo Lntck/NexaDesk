@@ -20,11 +20,6 @@ service:
   type: ClusterIP
   port: 8000
 
-migrations:
-  enabled: true
-  hook: post-install,pre-upgrade
-  backoffLimit: 2
-
 livenessProbe:
   httpGet:
     path: /health/live

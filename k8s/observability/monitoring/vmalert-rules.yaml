@@ -15,12 +15,14 @@ data:
         rules:
           - alert: DbRoleErrors
             expr: 'kubernetes.pod_namespace:nexadesk AND kubernetes.pod_name:nexadesk-db-postgresql-0 AND _msg:root AND _msg:does | stats count() as errors | filter errors:>5'
+            for: 2m
             labels:
               severity: warning
             annotations:
               description: 'Postgres reports missing role on nexadesk-db-postgresql-0: {{ $value }} occurrences in the last minute'
           - alert: BackendErrors
             expr: 'service.name:nexadesk-backend AND level:ERROR | stats by (kubernetes.pod_name) count() as errors | filter errors:>0'
+            for: 2m
             labels:
               severity: warning
             annotations:

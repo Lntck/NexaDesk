@@ -126,6 +126,5 @@ cookies.txt
 k8s/secrets/*.yaml
 
 k8s/charts/*/charts/*.tgz
-k8s/charts/*/Chart.lock
 
 *.local.yaml

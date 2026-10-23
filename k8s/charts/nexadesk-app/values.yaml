@@ -35,3 +35,9 @@ config:
   redisDb: 0
   logLevel: INFO
   environment: dev
+
+# Migration job
+migrations:
+  enabled: true
+  hook: pre-install,pre-upgrade
+  backoffLimit: 2
