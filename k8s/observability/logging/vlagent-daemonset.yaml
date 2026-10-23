@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: vlagent
-  namespace: logging
+  namespace: observability
   labels:
     app.kubernetes.io/name: vlagent
     app.kubernetes.io/component: collector
@@ -28,7 +28,7 @@ spec:
           image: victoriametrics/vlagent:v1.53.0
           args:
             - "-kubernetesCollector"
-            - "-remoteWrite.url=http://victorialogs.logging.svc.cluster.local:9428/insert/native"
+            - "-remoteWrite.url=http://victorialogs.observability.svc.cluster.local:9428/insert/native"
             - "-tmpDataPath=/var/lib/vlagent"
             - "-remoteWrite.maxDiskUsagePerURL=2097152000"
           securityContext:

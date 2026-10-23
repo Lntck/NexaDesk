@@ -2,10 +2,10 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: grafana-datasources
-  namespace: logging
+  namespace: observability
   labels:
     app.kubernetes.io/name: grafana
-    app.kubernetes.io/component: monitoring
+    app.kubernetes.io/component: ui
 data:
   victorialogs.yaml: |
     apiVersion: 1
@@ -13,7 +13,7 @@ data:
       - name: VictoriaLogs
         type: victoriametrics-logs-datasource
         access: proxy
-        url: http://victorialogs.logging.svc:9428
+        url: http://victorialogs.observability.svc:9428
         isDefault: true
         jsonData:
           maxLines: 1000

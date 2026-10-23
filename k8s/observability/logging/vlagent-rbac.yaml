@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: vlagent
-  namespace: logging
+  namespace: observability
   labels:
     app.kubernetes.io/name: vlagent
     app.kubernetes.io/component: collector
@@ -33,4 +33,4 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: vlagent
-    namespace: logging
+    namespace: observability

@@ -2,21 +2,21 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: vmalert
-  namespace: logging
+  namespace: observability
   labels:
     app.kubernetes.io/name: vmalert
-    app.kubernetes.io/component: monitoring
+    app.kubernetes.io/component: alerting
 spec:
   replicas: 1
   selector:
     matchLabels:
       app.kubernetes.io/name: vmalert
-      app.kubernetes.io/component: monitoring
+      app.kubernetes.io/component: alerting
   template:
     metadata:
       labels:
         app.kubernetes.io/name: vmalert
-        app.kubernetes.io/component: monitoring
+        app.kubernetes.io/component: alerting
     spec:
       securityContext:
         runAsNonRoot: true
@@ -28,8 +28,8 @@ spec:
           image: victoriametrics/vmalert:v1.154.0
           args:
             - "-rule=/etc/vmalert/rules/*.yaml"
-            - "-datasource.url=http://victorialogs.logging.svc:9428"
-            - "-notifier.url=http://alertmanager.logging.svc:9093"
+            - "-datasource.url=http://victorialogs.observability.svc:9428"
+            - "-notifier.url=http://alertmanager.observability.svc:9093"
             - "-rule.evalDelay=5s"
             - "-httpListenAddr=:8880"
           ports:
