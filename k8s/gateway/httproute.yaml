@@ -12,12 +12,14 @@ spec:
       kind: Gateway
       name: nexadesk
   rules:
-    - matches:
+    - name: sse
+      matches:
         - path:
-            type: PathPrefix
-            value: /api
+            type: RegularExpression
+            value: "^/api/v1/projects/[0-9]+/events/?$"
       timeouts:
         request: "0s"
+        backendRequest: "0s"
       backendRefs:
         - name: backend
           port: 8000
@@ -26,7 +28,16 @@ spec:
             type: PathPrefix
             value: /health
       timeouts:
-        request: "0s"
+        request: "30s"
+      backendRefs:
+        - name: backend
+          port: 8000
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /api
+      timeouts:
+        request: "30s"
       backendRefs:
         - name: backend
           port: 8000
@@ -49,6 +60,8 @@ spec:
         - path:
             type: PathPrefix
             value: /
+      timeouts:
+        request: "30s"
       backendRefs:
         - name: frontend
           port: 8080

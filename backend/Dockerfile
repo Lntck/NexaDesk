@@ -34,8 +34,8 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/*
 
-RUN addgroup --system fastapi && \
-    adduser --system --ingroup fastapi fastapi
+RUN addgroup --system --gid 1000 fastapi && \
+    adduser --system --uid 1000 --ingroup fastapi fastapi
 
 WORKDIR /app
 

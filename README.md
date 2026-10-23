@@ -93,6 +93,8 @@ docker compose up --build -d
 
 Behind HTTPS set COOKIE_SECURE=true in .env and point CORS_ORIGINS at the public origin. All data lives in the postgres_data and redis_data volumes.
 
+For the Kubernetes deployment (helmfile, Gateway API routing, logging and alerting) see [k8s/README.md](k8s/README.md).
+
 ## Configuration
 
 All settings live in the .env file (git-ignored). The full annotated list is in [.env.template](.env.template).
@@ -148,11 +150,11 @@ The backend emits structured JSON logs to stdout, one JSON object per line. Ever
 
 ## Monitoring and alerting
 
-Container logs from every node are shipped by the vlagent DaemonSet (namespace logging) into single-node VictoriaLogs, so all JSON fields stay queryable with LogsQL. The monitoring stack lives in k8s/monitoring.
+Container logs from every node are shipped by the vlagent DaemonSet (namespace observability) into single-node VictoriaLogs, so all JSON fields stay queryable with LogsQL. The stack is plain manifests applied with kubectl, details in [k8s/README.md](k8s/README.md).
 
-* Grafana with the official VictoriaLogs datasource plugin (victoriametrics-logs-datasource), provisioned from a ConfigMap together with log level rules. Access: kubectl port-forward svc/grafana -n logging 3000:3000 (admin/admin), then Explore -> VictoriaLogs.
-* vmalert evaluates LogsQL rules (group type vlogs) every minute: BackendErrors fires on ERROR records from the backend, DbRoleErrors watches postgres "role does not exist" failures on db-0. UI: kubectl port-forward svc/vmalert -n logging 8880:8880, page /vmalert.
-* Alertmanager receives fired alerts; a real receiver (webhook, mail) is configured in k8s/monitoring/alertmanager-config.yaml. UI: kubectl port-forward svc/alertmanager -n logging 9093:9093.
+* Grafana with the official VictoriaLogs datasource plugin (victoriametrics-logs-datasource), provisioned from a ConfigMap together with log level rules. Access: kubectl port-forward svc/grafana -n observability 3000:3000 (admin/admin), then Explore -> VictoriaLogs.
+* vmalert evaluates LogsQL rules (group type vlogs) every minute with a 2 minute pending window: BackendErrors fires on ERROR records from the backend, DbRoleErrors watches postgres "role does not exist" failures on nexadesk-db-postgresql-0. UI: kubectl port-forward svc/vmalert -n observability 8880:8880, page /vmalert.
+* Alertmanager receives fired alerts; the bundled receiver is named "null" and drops them, so add a real receiver (webhook, mail) in k8s/observability/monitoring/alertmanager-config.yaml when alert delivery is needed. UI: kubectl port-forward svc/alertmanager -n observability 9093:9093.
 
 ## API Documentation
 
@@ -167,6 +169,7 @@ Container logs from every node are shipped by the vlagent DaemonSet (namespace l
 |- backend/             FastAPI API, Alembic migrations, unit tests
 |- frontend/            React web client (Vite + TypeScript)
 |- docs/                API contract
+|- k8s/                 Kubernetes charts, helmfile, observability stack
 |- docker-compose.yml   the whole stack
 |- .env.template        configuration reference
 |- Makefile             stack commands

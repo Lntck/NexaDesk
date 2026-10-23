@@ -1,0 +1,37 @@
+architecture: standalone
+
+auth:
+  existingSecret: app-secrets
+  secretKeys:
+    adminPasswordKey: POSTGRES_PASSWORD
+    userPasswordKey: POSTGRES_USER_PASSWORD
+    replicationPasswordKey: POSTGRES_REPLICATION_PASSWORD
+  username: nexadesk
+  database: nexadesk
+
+primary:
+  persistence:
+    enabled: true
+    size: 1Gi
+
+  readinessProbe:
+    enabled: true
+    initialDelaySeconds: 5
+    periodSeconds: 10
+
+  livenessProbe:
+    enabled: true
+    initialDelaySeconds: 30
+    periodSeconds: 10
+
+resources:
+  requests:
+    memory: 256Mi
+    cpu: 250m
+  limits:
+    memory: 512Mi
+    cpu: 500m
+
+commonLabels:
+  app.kubernetes.io/part-of: nexadesk
+  app.kubernetes.io/component: db

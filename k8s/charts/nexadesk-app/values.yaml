@@ -1,0 +1,43 @@
+global:
+  imagePullSecrets: []
+  envConfigMapName: app-config
+  envSecretName: app-secrets
+
+backend:
+  enabled: true
+  fullnameOverride: backend
+  replicaCount: 1
+  image:
+    repository: ghcr.io/nexadesk/backend
+    tag: v1.3.0
+  service:
+    type: ClusterIP
+    port: 8000
+
+frontend:
+  enabled: true
+  fullnameOverride: frontend
+  replicaCount: 1
+  image:
+    repository: ghcr.io/nexadesk/frontend
+    tag: v1.1.0
+  service:
+    type: ClusterIP
+    port: 8080
+
+# ConfigMap (parent)
+config:
+  dbHost: nexadesk-db-postgresql
+  dbPort: "5432"
+  dbName: nexadesk
+  redisHost: nexadesk-redis-master
+  redisPort: "6379"
+  redisDb: 0
+  logLevel: INFO
+  environment: dev
+
+# Migration job
+migrations:
+  enabled: true
+  hook: pre-install,pre-upgrade
+  backoffLimit: 2
