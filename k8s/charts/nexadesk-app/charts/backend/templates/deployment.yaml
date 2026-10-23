@@ -27,7 +27,7 @@ spec:
         {{- toYaml . | nindent 8 }}
         {{- end }}
     spec:
-      {{- with .Values.imagePullSecrets }}
+      {{- with .Values.global.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
@@ -38,7 +38,7 @@ spec:
       {{- end }}
       containers:
         - name: {{ .Chart.Name }}
-          {{- with .Values.securityContext }}
+          {{- with .Values.containerSecurityContext }}
           securityContext:
             {{- toYaml . | nindent 12 }}
           {{- end }}
@@ -50,9 +50,9 @@ spec:
               protocol: TCP
           envFrom:
             - configMapRef:
-                name: {{ .Values.envConfigMapName }}
+                name: {{ .Values.global.envConfigMapName }}
             - secretRef:
-                name: {{ .Values.envSecretName }}
+                name: {{ .Values.global.envSecretName }}
           env:
             - name: K8S_POD_NAME
               valueFrom:

@@ -2,6 +2,9 @@ replicaCount: 1
 
 fullnameOverride: frontend
 
+global:
+  imagePullSecrets: []
+
 image:
   repository: nexadesk-frontend
   tag: v1.1.0

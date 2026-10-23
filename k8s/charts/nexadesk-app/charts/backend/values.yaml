@@ -2,6 +2,15 @@ replicaCount: 1
 
 fullnameOverride: backend
 
+global:
+  envConfigMapName: app-config
+  envSecretName: app-secrets
+  imagePullSecrets: []
+
+serviceAccount:
+  create: false
+  name: ""
+
 image:
   repository: ghcr.io/nexadesk/backend
   tag: v1.3.0
