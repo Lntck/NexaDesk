@@ -74,8 +74,6 @@ spec:
               drop: ["ALL"]
           command: ["alembic", "upgrade", "head"]
           envFrom:
-            # optional: the ConfigMap is created together with the release and
-            # is absent when the pre-install hook runs on a fresh install
             - configMapRef:
                 name: {{ .Values.global.envConfigMapName }}
                 optional: true

@@ -4,6 +4,11 @@ backend:
   image:
     repository: ghcr.io/nexadesk/backend
     tag: v1.3.1
+  podAnnotations: {
+      prometheus.io/scrape: "true",
+      prometheus.io/port: "9100",
+      prometheus.io/path: "/metrics",
+  }
 
 frontend:
   enabled: true
