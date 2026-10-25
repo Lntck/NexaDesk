@@ -9,7 +9,18 @@ auth:
   username: nexadesk
   database: nexadesk
 
+metrics:
+  enabled: true
+  networkPolicy:
+    enabled: true
+    scrapeNamespaces:
+      - observability
+
 primary:
+  podAnnotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9187"
+    prometheus.io/path: "/metrics"
   persistence:
     enabled: true
     size: 1Gi
