@@ -16,6 +16,13 @@ from starlette.datastructures import MutableHeaders
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from app.core.logger import logger
+from app.core.metrics import (
+    HTTP_REQUEST_DURATION_SECONDS,
+    HTTP_REQUESTS_IN_PROGRESS,
+    HTTP_REQUESTS_TOTAL,
+    is_excluded_path,
+    route_template,
+)
 
 HEALTH_PATH_PREFIX = "/health"
 REQUEST_ID_HEADER = "x-request-id"
@@ -143,3 +150,69 @@ class RequestLoggingMiddleware:
                     user_id=user_id,
                 )
             structlog.contextvars.clear_contextvars()
+
+
+class MetricsMiddleware:
+    """ASGI middleware collecting RED metrics per route template."""
+
+    def __init__(self, app: ASGIApp) -> None:
+        """Wrap an ASGI application.
+
+        Args:
+            app: application to wrap.
+        """
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        """Measure one request and record it in the shared registry.
+
+        Scrapes of /metrics and health probes are left out so that the
+        monitoring traffic does not distort the request rows.
+
+        Args:
+            scope: ASGI connection scope.
+            receive: ASGI receive callable.
+            send: ASGI send callable.
+
+        Returns:
+            None
+        """
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        method = scope.get("method", "")
+        if is_excluded_path(scope.get("path", "")):
+            await self.app(scope, receive, send)
+            return
+
+        status_code = 500
+        started = time.perf_counter()
+        in_progress = HTTP_REQUESTS_IN_PROGRESS.labels(method=method)
+        in_progress.inc()
+
+        async def send_wrapper(message: Message) -> None:
+            """Track the response status of the request.
+
+            Args:
+                message: ASGI message on its way to the client.
+
+            Returns:
+                None
+            """
+            nonlocal status_code
+            if message["type"] == "http.response.start":
+                status_code = message["status"]
+            await send(message)
+
+        try:
+            await self.app(scope, receive, send_wrapper)
+        finally:
+            in_progress.dec()
+            route = route_template(scope)
+            HTTP_REQUESTS_TOTAL.labels(
+                method=method, route=route, status=str(status_code)
+            ).inc()
+            HTTP_REQUEST_DURATION_SECONDS.labels(method=method, route=route).observe(
+                time.perf_counter() - started
+            )

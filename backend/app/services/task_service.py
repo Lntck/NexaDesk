@@ -6,6 +6,7 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.roles import load_role, resolve_role
+from app.core.metrics import observe_task_created, observe_task_transition
 from app.enums import ActivityEventType, Priority, ProjectRole
 from app.exceptions import (
     AccessDenied,
@@ -183,6 +184,7 @@ class TaskService:
             task_id=task.id,
             data={"key": task.key, "title": task.title},
         )
+        observe_task_created(data.priority.value)
         return TaskRead.model_validate(task)
 
     async def list_tasks(
@@ -410,35 +412,52 @@ class TaskService:
             PayloadError: when the status belongs to another project.
             InvalidTransition: when the target column is not adjacent.
         """
-        task, role = await self._load_task(session, task_id, actor_id)
-        resolve_role(role, ProjectRole.MEMBER)
-        self._ensure_writable(task)
+        from_position: int | None = None
+        to_position: int | None = None
+        result = "error"
+        try:
+            task, role = await self._load_task(session, task_id, actor_id)
+            resolve_role(role, ProjectRole.MEMBER)
+            self._ensure_writable(task)
+            from_position = task.status.position
 
-        target = await self._get_target_status(session, task, data.status_id)
-        self._ensure_adjacent(task, target)
+            target = await self._get_target_status(session, task, data.status_id)
+            to_position = target.position
+            self._ensure_adjacent(task, target)
 
-        previous_key = task.status.key
-        task.status_id = target.id
-        task.status = target
-        task.rank = await self.task_crud.next_rank(session, task.project_id, target.id)
-        task.version += 1
-        task.updated_at = utcnow()
-        await self.task_crud.update(session, task)
-        await self.activity.record(
-            session,
-            ActivityEventType.TASK_STATUS_CHANGED,
-            actor_id,
-            project_id=task.project_id,
-            task_id=task.id,
-            data={"key": task.key, "from": previous_key, "to": target.key},
-        )
+            previous_key = task.status.key
+            task.status_id = target.id
+            task.status = target
+            task.rank = await self.task_crud.next_rank(
+                session, task.project_id, target.id
+            )
+            task.version += 1
+            task.updated_at = utcnow()
+            await self.task_crud.update(session, task)
+            await self.activity.record(
+                session,
+                ActivityEventType.TASK_STATUS_CHANGED,
+                actor_id,
+                project_id=task.project_id,
+                task_id=task.id,
+                data={"key": task.key, "from": previous_key, "to": target.key},
+            )
+            result = "success"
 
-        return TaskTransitionRead(
-            id=task.id,
-            key=task.key,
-            status=TaskStatusBrief.model_validate(target),
-            updated_at=task.updated_at,
-        )
+            return TaskTransitionRead(
+                id=task.id,
+                key=task.key,
+                status=TaskStatusBrief.model_validate(target),
+                updated_at=task.updated_at,
+            )
+        except (StaleVersion, InvalidTransition):
+            result = "conflict"
+            raise
+        except Exception:
+            result = "error"
+            raise
+        finally:
+            observe_task_transition(from_position, to_position, result)
 
     async def assign(
         self,

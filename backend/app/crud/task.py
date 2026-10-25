@@ -1,3 +1,4 @@
+from datetime import date
 from typing import Any, Sequence
 
 from sqlalchemy import case, func, or_, select
@@ -158,6 +159,26 @@ class TaskCRUD:
                 Task.status_id == status_id,
                 Task.deleted_at.is_(None),
             )
+        )
+        return int(await session.scalar(stmt) or 0)
+
+    async def count_overdue(self, session: AsyncSession, today: date) -> int:
+        """Count live tasks whose due date has passed.
+
+        Board columns are free-form, so tasks in a finished column still
+        count until their due date is cleared or the task is deleted.
+
+        Args:
+            session: active database session.
+            today: current date to compare the due date against.
+
+        Returns:
+            int: number of live tasks overdue at the given date.
+        """
+        stmt = (
+            select(func.count())
+            .select_from(Task)
+            .where(Task.deleted_at.is_(None), Task.due_date < today)
         )
         return int(await session.scalar(stmt) or 0)
 

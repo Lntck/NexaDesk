@@ -13,12 +13,20 @@ serviceAccount:
 
 image:
   repository: ghcr.io/nexadesk/backend
-  tag: v1.3.0
+  tag: v1.3.1
   pullPolicy: IfNotPresent
 
 service:
   type: ClusterIP
   port: 8000
+
+metrics:
+  enabled: true
+  port: 9100
+  networkPolicy:
+    enabled: true
+    scrapeNamespaces:
+      - observability
 
 livenessProbe:
   httpGet:

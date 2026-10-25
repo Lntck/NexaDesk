@@ -1,3 +1,4 @@
+from datetime import date
 from typing import Any, Protocol, Sequence
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -104,6 +105,18 @@ class TaskCRUDProtocol(Protocol):
 
         Returns:
             int: number of live tasks in the column.
+        """
+        ...
+
+    async def count_overdue(self, session: AsyncSession, today: date) -> int:
+        """Count live tasks whose due date has passed.
+
+        Args:
+            session: active database session.
+            today: current date to compare the due date against.
+
+        Returns:
+            int: number of live tasks overdue at the given date.
         """
         ...
 

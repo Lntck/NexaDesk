@@ -13,6 +13,7 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.metrics import observe_notification_created
 from app.enums import ActivityEventType, NotificationType
 from app.events import NotificationDelivery
 from app.exceptions import NotificationNotFound
@@ -110,6 +111,7 @@ class NotificationService:
                 ),
             )
             notification.actor = actor
+            observe_notification_created(notification_type.value)
             deliveries.append(
                 NotificationDelivery(
                     user_id=user_id,

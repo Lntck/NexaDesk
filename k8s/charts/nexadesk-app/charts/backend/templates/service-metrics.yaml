@@ -1,0 +1,23 @@
+{{- if .Values.metrics.enabled }}
+# Internal metrics endpoint for the monitoring system. The Service is not
+# referenced by any HTTPRoute, so the gateway never forwards to it, and the
+# network policy limits the port to the monitoring namespaces.
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "backend.fullname" . }}-metrics
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "backend.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backend
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .Values.metrics.port }}
+      targetPort: metrics
+      protocol: TCP
+      name: metrics
+  selector:
+    {{- include "backend.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: backend
+{{- end }}

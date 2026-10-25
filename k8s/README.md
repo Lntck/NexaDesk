@@ -64,7 +64,8 @@ kubectl get pods -n observability
   passwords from app-secrets (environments/dev/postgres-values.yaml)
 * nexadesk-redis: bitnami/redis, password auth from app-secrets
 * nexadesk-app: umbrella chart, app-config ConfigMap, alembic migration job, backend
-  and frontend deployments with probes and security contexts
+  and frontend deployments with probes and security contexts, backend-metrics Service
+  and a NetworkPolicy limiting the metrics port to the monitoring namespaces
 
 Install order is enforced by helmfile needs: db and redis first, then the app.
 
@@ -96,6 +97,22 @@ Only the SSE stream needs an unlimited timeout, everything else is bounded on pu
 RegularExpression match precedence over PathPrefix is implementation-specific in the
 Gateway API, but Envoy Gateway prioritises regex matches: this was verified with marker
 rules on a live cluster. Keep the SSE rule as RegularExpression when editing the routes.
+
+## Metrics
+
+* the backend serves OpenMetrics at /metrics on a dedicated port (METRICS_PORT,
+  default 9100) configured through the app-config ConfigMap
+* the backend-metrics Service exposes the port inside the cluster and is not
+  referenced by the HTTPRoutes, so the gateway never forwards to it
+* NetworkPolicy backend keeps port 8000 open for the gateway, probes and in-cluster
+  clients and limits port 9100 to metrics.networkPolicy.scrapeNamespaces
+  (observability by default). The port carries no authentication, so the policy is
+  the only access control
+* the monitoring system scrapes backend-metrics.nexadesk.svc:9100 from its own
+  namespace; locally Docker Compose publishes the same port for curl and scrapers
+
+When METRICS_PORT is changed, change backend.metrics.port as well: the container
+port and the Service targetPort follow it.
 
 On minikube without a cloud load balancer the Gateway shows Programmed=False with
 reason AddressNotAssigned and the envoy service stays pending. Traffic still works

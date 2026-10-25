@@ -23,6 +23,7 @@ services:
 
     ports:
       - "${API_PORT:-8000}:8000"
+      - "${METRICS_PORT:-9100}:${METRICS_PORT:-9100}"
 
     depends_on:
       db:

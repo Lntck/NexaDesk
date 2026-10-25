@@ -1,3 +1,14 @@
+environments:
+  dev:
+  prod:
+
+---
+
+helmDefaults:
+  wait: true
+  timeout: 300
+  atomic: true
+
 repositories:
   - name: bitnami
     url: https://charts.bitnami.com/bitnami
@@ -8,29 +19,21 @@ releases:
     chart: bitnami/postgresql
     version: 18.12.14
     values:
-      - environments/dev/postgres-values.yaml
-    wait: true
-    timeout: 300
-    atomic: true
+      - environments/{{ .Environment.Name }}/postgres-values.yaml
 
   - name: nexadesk-redis
     namespace: nexadesk
     chart: bitnami/redis
     version: 28.3.0
     values:
-      - environments/dev/redis-values.yaml
-    wait: true
-    timeout: 300
-    atomic: true
+      - environments/{{ .Environment.Name }}/redis-values.yaml
 
   - name: nexadesk-app
     namespace: nexadesk
     chart: ./charts/nexadesk-app
     values:
-      - environments/dev/app-values.yaml
+      - environments/{{ .Environment.Name }}/app-values.yaml
     needs:
       - nexadesk/nexadesk-db
       - nexadesk/nexadesk-redis
-    wait: true
     timeout: 600
-    atomic: true

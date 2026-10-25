@@ -47,7 +47,7 @@ RUN chown -R fastapi:fastapi /app
 
 USER fastapi
 
-EXPOSE 8000
+EXPOSE 8000 9100
 
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
     CMD curl -f http://localhost:8000/health/live || exit 1

@@ -29,6 +29,10 @@ labels, watchers, activity history) and the notification domain.
 - Rate limiting (SlowAPI)
 - CORS middleware configuration
 - Liveness / readiness health probes
+- Observability:
+  - OpenMetrics endpoint on a dedicated port, polled by the monitoring system
+  - Request RED metrics per route template and business metrics for tasks,
+    comments, notifications, auth attempts and realtime streams
 - Project domain:
   - Projects with unique keys, archive/restore, ownership transfer
   - Project membership with roles (`owner` < `admin` < `member` < `viewer`)
@@ -118,7 +122,7 @@ API (endpoints) -> Services (business logic) -> CRUD (data access) -> Models
 |  |  |  |- router.py
 |  |  |  |- endpoints/     # auth, users, projects, members, statuses, tasks, comments, labels, watchers, activity, events
 |  |- auth/                # Auth dependencies, RBAC permissions, token schema
-|  |- core/                # Config, security, constants, limiter, logger
+|  |- core/                # Config, security, constants, limiter, logger, metrics
 |  |- crud/                # Data access layer
 |  |- db/                  # DatabaseClient (postgres), RedisClient
 |  |- dependencies/        # DI: db session, redis, crud, services
@@ -167,6 +171,7 @@ Auth and user endpoints are under `/api/v1`. Health endpoints are top-level.
 | GET | `/health/live` | No | - | Liveness probe |
 | GET | `/health/ready` | No | - | Readiness probe (checks Postgres + Redis) |
 | GET | `/health` | No | - | Aggregate health probe (same checks as readiness) |
+| GET | `/metrics` (port `9100`) | No | - | OpenMetrics endpoint for the monitoring system |
 | POST | `/api/v1/register` | No | 1/min | Register a new user |
 | POST | `/api/v1/login` | No | 5/min | Login with username/password form |
 | POST | `/api/v1/refresh` | No | 3/min | Rotate refresh token and issue a new access token |
@@ -262,6 +267,73 @@ curl -N "http://127.0.0.1:8000/api/v1/projects/42/events" \
   -H "Authorization: Bearer <access_token>"
 ```
 
+## Metrics
+
+The backend exposes an OpenMetrics endpoint that the monitoring system polls
+periodically and stores centrally.
+
+* URL: `GET /metrics` on a dedicated port (`METRICS_PORT`, default `9100`), not
+  part of the public routing
+* Format: OpenMetrics 1.0.0 by default; an Accept header explicitly asking for
+  `text/plain` gets the classic Prometheus text format
+* Auth: none on purpose, access control is a network level concern. The port
+  must be reachable for the monitoring system only (firewall, NetworkPolicy;
+  the chart in `k8s/` ships a NetworkPolicy admitting only the monitoring
+  namespaces)
+* Request metrics skip scrapes and probes, so monitoring traffic does not
+  distort the rows
+
+Runtime metrics: `http_requests_total` (method, route template, status),
+`http_request_duration_seconds` (histogram by method and route template),
+`http_requests_in_progress` (method), `app_info` (service, version) plus the
+process and GC collectors of `prometheus_client`. The route label carries the
+template, e.g. `/api/v1/tasks/{task_id}`; requests that match no route collapse
+into `unmatched`.
+
+Business metrics:
+
+| Metric | Type | Labels | Counted |
+|---|---|---|---|
+| `nexadesk_tasks_created_total` | counter | `priority` | one per created task |
+| `nexadesk_tasks_transitions_total` | counter | `direction`, `result` | one per task status change attempt |
+| `nexadesk_comments_created_total` | counter | `has_mentions` | one per created comment |
+| `nexadesk_notifications_created_total` | counter | `type` | one per created notification |
+| `nexadesk_auth_attempts_total` | counter | `result` | one per login or refresh attempt and per throttled auth request |
+| `nexadesk_sse_streams_active` | gauge | - | realtime streams open right now |
+| `nexadesk_tasks_overdue` | gauge | - | live tasks with a due date in the past, snapshot refreshed every 60 s |
+
+Label values:
+
+* `priority`: `LOW`, `MEDIUM`, `HIGH`, `CRITICAL`
+* `direction`: `forward` and `backward` compare the board positions of the
+  source and target columns, `same` is an unchanged position, `unknown` means
+  the attempt broke off before both columns were known
+* `result` of transitions: `success` (the move is done), `conflict` (the move
+  disagrees with the board state: stale `If-Match` version or a non-adjacent
+  column), `error` (any other refusal: no access, archived project, missing
+  task, storage failure)
+* `has_mentions`: `true` when the body resolved to mentions of existing users
+  other than the author, otherwise `false`
+* `type`: the `NotificationType` key, e.g. `task.assigned`, `comment.mentioned`
+* `result` of auth attempts: `success`, `invalid_credentials`, `invalid_token`,
+  `rate_limited`, `error`
+
+A failed overdue snapshot keeps the last published value instead of dropping to
+zero. Board columns are free-form, so tasks in a finished column stay in the
+gauge until their due date is cleared or the task is deleted.
+
+Example scrape job for vmagent or Prometheus. In the cluster the endpoint sits
+behind the `backend-metrics` Service (`nexadesk` namespace); locally Docker
+Compose publishes the same port on the host.
+
+```yaml
+- job_name: nexadesk-backend
+  metrics_path: /metrics
+  scrape_interval: 15s
+  static_configs:
+    - targets: ["backend-metrics.nexadesk.svc:9100"]
+```
+
 ## Configuration
 
 Configuration is loaded from a `.env` file via Pydantic Settings.
@@ -290,6 +362,9 @@ Configuration is loaded from a `.env` file via Pydantic Settings.
 | `K8S_POD_NAME` | No | `k8s.pod.name` field, set automatically via the downward API |
 | `SSE_MAX_QUEUED_EVENTS` | No | Per-stream queue bound before forced disconnect (default: `10000`) |
 | `SSE_REPLAY_LIMIT` | No | Maximum replayed events per reconnect (default: `500`) |
+| `METRICS_ENABLED` | No | Serve `/metrics` on the dedicated port (default: `true`) |
+| `METRICS_HOST` | No | Metrics endpoint bind address (default: `0.0.0.0`) |
+| `METRICS_PORT` | No | Metrics endpoint port (default: `9100`) |
 
 \* Required only when running via Docker Compose.
 
