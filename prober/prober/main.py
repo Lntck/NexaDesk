@@ -96,7 +96,7 @@ class Settings:
         """
         return cls(
             target_url=os.environ.get("PROBE_TARGET_URL", "http://localhost:8000"),
-            email=os.environ.get("PROBE_EMAIL", "prober@nexadesk.local"),
+            email=os.environ.get("PROBE_EMAIL", "prober@nexadesk.dev"),
             password=os.environ.get("PROBE_PASSWORD", "prober-strong-pass"),
             username=os.environ.get("PROBE_USERNAME", "prober"),
             project_key=os.environ.get("PROBE_PROJECT_KEY", DEFAULT_PROJECT_KEY),

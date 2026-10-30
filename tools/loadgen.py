@@ -49,12 +49,13 @@ class LoadSession:
 
         Args:
             client: HTTP client with the API base URL configured.
-            email: login email of the load account.
+            email: email the load account is registered with.
             password: password of the load account.
             project_key: key of the project the traffic works in.
         """
         self._client = client
         self._email = email
+        self._username = email.split("@")[0]
         self._password = password
         self._project_key = project_key
         self._token: str | None = None
@@ -107,20 +108,22 @@ class LoadSession:
         """
         response = await self._client.post(
             LOGIN_PATH,
-            data={"username": self._email, "password": self._password},
+            data={"username": self._username, "password": self._password},
         )
         if response.status_code == 401:
-            await self._client.post(
+            register_response = await self._client.post(
                 REGISTER_PATH,
                 json={
-                    "username": self._email.split("@")[0],
+                    "username": self._username,
                     "email": self._email,
                     "password": self._password,
                 },
             )
+            if register_response.status_code not in (201, 409):
+                register_response.raise_for_status()
             response = await self._client.post(
                 LOGIN_PATH,
-                data={"username": self._email, "password": self._password},
+                data={"username": self._username, "password": self._password},
             )
         response.raise_for_status()
         self._token = response.json()["access_token"]
@@ -287,7 +290,7 @@ def main() -> None:
         default=0.0,
         help="stop after this many seconds, 0 means run until interrupted",
     )
-    parser.add_argument("--email", default="loadgen@nexadesk.local")
+    parser.add_argument("--email", default="loadgen@nexadesk.dev")
     parser.add_argument("--password", default="loadgen-strong-pass")
     parser.add_argument("--project-key", default="LOAD")
     args = parser.parse_args()

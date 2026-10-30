@@ -99,9 +99,10 @@ class UserJourney:
 
         Args:
             base_url: root URL of the NexaDesk API.
-            email: login email of the probe account.
+            email: email the probe account is registered with.
             password: password of the probe account.
-            username: username of the probe account, used for registration.
+            username: username of the probe account, used for registration
+                and login.
             project_key: key of the project the journey works in.
             timeout_s: per-request timeout, in seconds.
             client: preconfigured client, one is created when omitted.
@@ -206,7 +207,7 @@ class UserJourney:
         """
         response = await self._client.post(
             "/api/v1/login",
-            data={"username": self._email, "password": self._password},
+            data={"username": self._username, "password": self._password},
         )
         self._ensure_status(response, (200,))
         self._token = response.json()["access_token"]

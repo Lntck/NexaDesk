@@ -58,7 +58,7 @@ class FakeApi:
         if path == "/api/v1/register":
             return httpx.Response(
                 201,
-                json={"id": 1, "username": "prober", "email": "prober@nexadesk.local"},
+                json={"id": 1, "username": "prober", "email": "prober@nexadesk.dev"},
             )
 
         if path == "/api/v1/projects" and request.method == "GET":
@@ -128,7 +128,7 @@ def build_journey(api: FakeApi) -> UserJourney:
     )
     return UserJourney(
         base_url="http://probe.test",
-        email="prober@nexadesk.local",
+        email="prober@nexadesk.dev",
         password="prober-strong-pass",
         username="prober",
         client=client,
