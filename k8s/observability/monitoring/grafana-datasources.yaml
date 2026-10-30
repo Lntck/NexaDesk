@@ -11,12 +11,14 @@ data:
     apiVersion: 1
     datasources:
       - name: VictoriaMetrics
+        uid: vm-metrics
         type: victoriametrics-metrics-datasource
         access: proxy
         url: http://vmsingle-victoria-metrics-single-server.observability.svc:8428
         isDefault: true
 
       - name: VictoriaLogs
+        uid: vm-logs
         type: victoriametrics-logs-datasource
         access: proxy
         url: http://victorialogs.observability.svc:9428

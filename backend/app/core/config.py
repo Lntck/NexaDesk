@@ -33,6 +33,7 @@ class Settings(BaseSettings):
     metrics_enabled: bool = True  # serve /metrics on the dedicated port
     metrics_host: str = "0.0.0.0"  # metrics endpoint bind address
     metrics_port: int = 9100  # metrics endpoint port
+    faults_enabled: bool = False  # expose the demo fault injection toggle
 
     @field_validator("database_url")
     @classmethod

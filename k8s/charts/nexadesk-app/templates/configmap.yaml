@@ -36,3 +36,5 @@ data:
   METRICS_ENABLED: {{ .Values.config.metricsEnabled | default "true" | quote }}
   METRICS_HOST: {{ .Values.config.metricsHost | default "0.0.0.0" | quote }}
   METRICS_PORT: {{ .Values.config.metricsPort | default 9100 | quote }}
+
+  FAULTS_ENABLED: {{ .Values.config.faultsEnabled | default "false" | quote }}
