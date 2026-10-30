@@ -30,7 +30,7 @@ spec:
           imagePullPolicy: IfNotPresent
           env:
             - name: GF_PLUGINS_PREINSTALL
-              value: "victoriametrics-logs-datasource"
+              value: "victoriametrics-logs-datasource,victoriametrics-metrics-datasource"
             - name: GF_USERS_ALLOW_SIGN_UP
               value: "false"
             - name: GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH
