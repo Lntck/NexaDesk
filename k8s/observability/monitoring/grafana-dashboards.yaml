@@ -706,6 +706,95 @@ data:
             "legend": {"displayMode": "list", "placement": "bottom", "showLegend": true},
             "tooltip": {"mode": "single", "sort": "none"}
           }
+        },
+        {
+          "type": "row",
+          "title": "Runtime",
+          "gridPos": {"h": 1, "w": 24, "x": 0, "y": 47},
+          "id": 20,
+          "collapsed": false,
+          "panels": []
+        },
+        {
+          "type": "timeseries",
+          "title": "Память backend (RSS) и лимит 512Mi",
+          "description": "process_resident_memory_bytes: резидентная память процесса backend относительно лимита контейнера 512Mi.",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 48},
+          "id": 21,
+          "datasource": {"type": "victoriametrics-metrics-datasource", "uid": "vm-metrics"},
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "max by (pod) (process_resident_memory_bytes{namespace=\"nexadesk\", pod=~\"backend-.*\"})",
+              "legendFormat": "{{pod}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bytes",
+              "min": 0,
+              "custom": {
+                "lineWidth": 2,
+                "fillOpacity": 10,
+                "showPoints": "never",
+                "thresholdsStyle": {"mode": "line"}
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"color": "green", "value": null},
+                  {"color": "orange", "value": 456130560},
+                  {"color": "red", "value": 536870912}
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {"displayMode": "list", "placement": "bottom", "showLegend": true},
+            "tooltip": {"mode": "single", "sort": "none"}
+          }
+        },
+        {
+          "type": "timeseries",
+          "title": "CPU backend (ядра, лимит 1)",
+          "description": "process_cpu_seconds_total: скорость потребления CPU процессом backend в ядрах; лимит контейнера — 1 core.",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 48},
+          "id": 22,
+          "datasource": {"type": "victoriametrics-metrics-datasource", "uid": "vm-metrics"},
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "max by (pod) (rate(process_cpu_seconds_total{namespace=\"nexadesk\", pod=~\"backend-.*\"}[5m]))",
+              "legendFormat": "{{pod}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "none",
+              "decimals": 2,
+              "min": 0,
+              "custom": {
+                "lineWidth": 2,
+                "fillOpacity": 10,
+                "showPoints": "never",
+                "thresholdsStyle": {"mode": "line"}
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"color": "green", "value": null},
+                  {"color": "orange", "value": 0.8},
+                  {"color": "red", "value": 1}
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {"displayMode": "list", "placement": "bottom", "showLegend": true},
+            "tooltip": {"mode": "single", "sort": "none"}
+          }
         }
       ],
       "refresh": "30s",

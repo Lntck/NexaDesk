@@ -18,12 +18,7 @@ data:
             for: 2m
             labels:
               severity: warning
+              service: nexadesk-db
             annotations:
+              summary: 'NexaDesk: PostgreSQL reports a missing role'
               description: 'Postgres reports missing role on {{ index .Labels "kubernetes.pod_name" }}: {{ $value }} occurrences in the last minute'
-          - alert: BackendErrors
-            expr: 'service.name:nexadesk-backend AND level:ERROR | stats by (kubernetes.pod_name) count() as errors | filter errors:>0'
-            for: 2m
-            labels:
-              severity: warning
-            annotations:
-              description: 'Error logs from {{ index .Labels "kubernetes.pod_name" }}: {{ $value }} in the last minute'
