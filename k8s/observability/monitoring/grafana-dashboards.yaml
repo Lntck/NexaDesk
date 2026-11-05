@@ -1,0 +1,719 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboards
+  namespace: observability
+  labels:
+    app.kubernetes.io/name: grafana
+    app.kubernetes.io/component: ui
+data:
+  nexadesk-sli-slo.json: |
+    {
+      "annotations": {"list": []},
+      "description": "SLI, SLO и SLA приложения NexaDesk: доступность, задержка, трафик, бизнес-метрики и синтетический пробер.",
+      "editable": true,
+      "graphTooltip": 1,
+      "links": [],
+      "panels": [
+        {
+          "type": "row",
+          "title": "Итоги SLI / SLO / SLA",
+          "gridPos": {"h": 1, "w": 24, "x": 0, "y": 0},
+          "id": 100,
+          "collapsed": false,
+          "panels": []
+        },
+        {
+          "type": "stat",
+          "title": "SLA-индекс (взвешенный, 30 дней)",
+          "description": "SLA_index = 0.30·доступность + 0.20·задержка + 0.15·трафик + 0.15·создание задач + 0.10·смены статуса + 0.10·сценарий пользователя.",
+          "gridPos": {"h": 4, "w": 4, "x": 0, "y": 1},
+          "id": 1,
+          "datasource": {"type": "victoriametrics-metrics-datasource", "uid": "vm-metrics"},
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "0.30 * sli:availability:ratio_rate30d + 0.20 * sli:latency_le_500ms:ratio_rate30d + 0.15 * clamp(sli:traffic_successful:rate5m / 10, 0, 1) + 0.15 * sli:tasks_created_success:ratio_rate30d + 0.10 * sli:transitions_success:ratio_rate30d + 0.10 * sli:probe_success:ratio_rate30d",
+              "legendFormat": "SLA index"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percentunit",
+              "decimals": 3,
+              "color": {"mode": "thresholds"},
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"color": "red", "value": null},
+                  {"color": "yellow", "value": 0.99},
+                  {"color": "green", "value": 0.995}
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "colorMode": "background",
+            "graphMode": "area",
+            "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+            "textMode": "auto"
+          }
+        },
+        {
+          "type": "stat",
+          "title": "Доступность (цель SLO 99.9%, 30 дней)",
+          "gridPos": {"h": 4, "w": 4, "x": 4, "y": 1},
+          "id": 2,
+          "datasource": {"type": "victoriametrics-metrics-datasource", "uid": "vm-metrics"},
+          "targets": [
+            {"refId": "A", "expr": "sli:availability:ratio_rate30d", "legendFormat": "доступность"}
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percentunit",
+              "decimals": 4,
+              "color": {"mode": "thresholds"},
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"color": "red", "value": null},
+                  {"color": "green", "value": 0.999}
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "colorMode": "background",
+            "graphMode": "area",
+            "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+            "textMode": "auto"
+          }
+        },
+        {
+          "type": "stat",
+          "title": "Задержка p95 (цель SLO 500 мс, 5 м)",
+          "gridPos": {"h": 4, "w": 4, "x": 8, "y": 1},
+          "id": 3,
+          "datasource": {"type": "victoriametrics-metrics-datasource", "uid": "vm-metrics"},
+          "targets": [
+            {"refId": "A", "expr": "sli:latency_p95_seconds:5m", "legendFormat": "p95"}
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "decimals": 3,
+              "color": {"mode": "thresholds"},
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"color": "green", "value": null},
+                  {"color": "yellow", "value": 0.4},
+                  {"color": "red", "value": 0.5}
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "colorMode": "background",
+            "graphMode": "area",
+            "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+            "textMode": "auto"
+          }
+        },
+        {
+          "type": "stat",
+          "title": "Создание задач (цель SLO 99.5%, 30 дней)",
+          "gridPos": {"h": 4, "w": 4, "x": 12, "y": 1},
+          "id": 4,
+          "datasource": {"type": "victoriametrics-metrics-datasource", "uid": "vm-metrics"},
+          "targets": [
+            {"refId": "A", "expr": "sli:tasks_created_success:ratio_rate30d", "legendFormat": "успешность"}
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percentunit",
+              "decimals": 4,
+              "color": {"mode": "thresholds"},
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"color": "red", "value": null},
+                  {"color": "green", "value": 0.995}
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "colorMode": "background",
+            "graphMode": "area",
+            "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+            "textMode": "auto"
+          }
+        },
+        {
+          "type": "stat",
+          "title": "Смены статуса (цель SLO 99%, 30 дней)",
+          "gridPos": {"h": 4, "w": 4, "x": 16, "y": 1},
+          "id": 5,
+          "datasource": {"type": "victoriametrics-metrics-datasource", "uid": "vm-metrics"},
+          "targets": [
+            {"refId": "A", "expr": "sli:transitions_success:ratio_rate30d", "legendFormat": "успешность"}
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percentunit",
+              "decimals": 4,
+              "color": {"mode": "thresholds"},
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"color": "red", "value": null},
+                  {"color": "green", "value": 0.99}
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "colorMode": "background",
+            "graphMode": "area",
+            "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+            "textMode": "auto"
+          }
+        },
+        {
+          "type": "stat",
+          "title": "Сценарий пользователя (цель SLO 99%, 30 дней)",
+          "gridPos": {"h": 4, "w": 4, "x": 20, "y": 1},
+          "id": 6,
+          "datasource": {"type": "victoriametrics-metrics-datasource", "uid": "vm-metrics"},
+          "targets": [
+            {"refId": "A", "expr": "sli:probe_success:ratio_rate30d", "legendFormat": "успешность"}
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percentunit",
+              "decimals": 4,
+              "color": {"mode": "thresholds"},
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"color": "red", "value": null},
+                  {"color": "green", "value": 0.99}
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "colorMode": "background",
+            "graphMode": "area",
+            "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+            "textMode": "auto"
+          }
+        },
+        {
+          "type": "row",
+          "title": "Бюджеты ошибок и режим демо",
+          "gridPos": {"h": 1, "w": 24, "x": 0, "y": 5},
+          "id": 101,
+          "collapsed": false,
+          "panels": []
+        },
+        {
+          "type": "gauge",
+          "title": "Остаток бюджета ошибок: доступность (30 дней)",
+          "description": "Бюджет ошибок доступности — 0.1% запросов. Шкала показывает, какая часть бюджета ещё не израсходована.",
+          "gridPos": {"h": 5, "w": 8, "x": 0, "y": 6},
+          "id": 7,
+          "datasource": {"type": "victoriametrics-metrics-datasource", "uid": "vm-metrics"},
+          "targets": [
+            {"refId": "A", "expr": "1 - ((1 - sli:availability:ratio_rate30d) / 0.001)", "legendFormat": "бюджет"}
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percentunit",
+              "decimals": 3,
+              "min": 0,
+              "max": 1,
+              "color": {"mode": "thresholds"},
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"color": "red", "value": null},
+                  {"color": "yellow", "value": 0.25},
+                  {"color": "green", "value": 0.5}
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "min": 0,
+            "max": 1,
+            "orientation": "auto",
+            "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+            "showThresholdLabels": true,
+            "showThresholdMarkers": true,
+            "sizing": "auto"
+          }
+        },
+        {
+          "type": "gauge",
+          "title": "Остаток бюджета ошибок: задержка (30 дней)",
+          "description": "Бюджет ошибок задержки — 5% запросов медленнее 500 мс.",
+          "gridPos": {"h": 5, "w": 8, "x": 8, "y": 6},
+          "id": 8,
+          "datasource": {"type": "victoriametrics-metrics-datasource", "uid": "vm-metrics"},
+          "targets": [
+            {"refId": "A", "expr": "1 - ((1 - sli:latency_le_500ms:ratio_rate30d) / 0.05)", "legendFormat": "бюджет"}
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percentunit",
+              "decimals": 3,
+              "min": 0,
+              "max": 1,
+              "color": {"mode": "thresholds"},
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"color": "red", "value": null},
+                  {"color": "yellow", "value": 0.25},
+                  {"color": "green", "value": 0.5}
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "min": 0,
+            "max": 1,
+            "orientation": "auto",
+            "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+            "showThresholdLabels": true,
+            "showThresholdMarkers": true,
+            "sizing": "auto"
+          }
+        },
+        {
+          "type": "stat",
+          "title": "Fault injection (режим демо)",
+          "description": "1 — в приложении включена искусственная деградация, 0 — работа без вмешательства.",
+          "gridPos": {"h": 5, "w": 8, "x": 16, "y": 6},
+          "id": 9,
+          "datasource": {"type": "victoriametrics-metrics-datasource", "uid": "vm-metrics"},
+          "targets": [
+            {"refId": "A", "expr": "nexadesk_fault_injection_active", "legendFormat": "активен"}
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "decimals": 0,
+              "color": {"mode": "thresholds"},
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"color": "green", "value": null},
+                  {"color": "red", "value": 1}
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "colorMode": "background",
+            "graphMode": "area",
+            "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+            "textMode": "auto"
+          }
+        },
+        {
+          "type": "row",
+          "title": "Трафик и доступность",
+          "gridPos": {"h": 1, "w": 24, "x": 0, "y": 11},
+          "id": 102,
+          "collapsed": false,
+          "panels": []
+        },
+        {
+          "type": "timeseries",
+          "title": "Запросы в секунду (всего, успешно, 5xx)",
+          "gridPos": {"h": 8, "w": 8, "x": 0, "y": 12},
+          "id": 10,
+          "datasource": {"type": "victoriametrics-metrics-datasource", "uid": "vm-metrics"},
+          "targets": [
+            {"refId": "A", "expr": "sli:traffic_total:rate5m", "legendFormat": "всего"},
+            {"refId": "B", "expr": "sli:traffic_successful:rate5m", "legendFormat": "успешно"},
+            {"refId": "C", "expr": "sum(rate(http_requests_total{status=~\"5..\"}[5m]))", "legendFormat": "5xx"}
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "reqps",
+              "decimals": 2,
+              "custom": {"lineWidth": 1, "fillOpacity": 10, "showPoints": "never"}
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {"displayMode": "list", "placement": "bottom", "showLegend": true},
+            "tooltip": {"mode": "single", "sort": "none"}
+          }
+        },
+        {
+          "type": "timeseries",
+          "title": "Доступность за 5 минут и линия SLO (99.9%)",
+          "gridPos": {"h": 8, "w": 8, "x": 8, "y": 12},
+          "id": 11,
+          "datasource": {"type": "victoriametrics-metrics-datasource", "uid": "vm-metrics"},
+          "targets": [
+            {"refId": "A", "expr": "sli:availability:ratio_rate5m", "legendFormat": "доступность"}
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percentunit",
+              "decimals": 4,
+              "min": 0.9,
+              "max": 1,
+              "custom": {
+                "lineWidth": 2,
+                "fillOpacity": 15,
+                "showPoints": "never",
+                "thresholdsStyle": {"mode": "line"}
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"color": "red", "value": null},
+                  {"color": "green", "value": 0.999}
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {"displayMode": "list", "placement": "bottom", "showLegend": true},
+            "tooltip": {"mode": "single", "sort": "none"}
+          }
+        },
+        {
+          "type": "timeseries",
+          "title": "Доля 5xx за 5 минут",
+          "gridPos": {"h": 8, "w": 8, "x": 16, "y": 12},
+          "id": 12,
+          "datasource": {"type": "victoriametrics-metrics-datasource", "uid": "vm-metrics"},
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(rate(http_requests_total{status=~\"5..\"}[5m])) / sum(rate(http_requests_total[5m]))",
+              "legendFormat": "доля 5xx"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percentunit",
+              "decimals": 4,
+              "min": 0,
+              "custom": {"lineWidth": 2, "fillOpacity": 15, "showPoints": "never"}
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {"displayMode": "list", "placement": "bottom", "showLegend": true},
+            "tooltip": {"mode": "single", "sort": "none"}
+          }
+        },
+        {
+          "type": "row",
+          "title": "Задержка",
+          "gridPos": {"h": 1, "w": 24, "x": 0, "y": 20},
+          "id": 103,
+          "collapsed": false,
+          "panels": []
+        },
+        {
+          "type": "timeseries",
+          "title": "Квантили задержки p50 / p95 / p99 и линия SLO (500 мс)",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 21},
+          "id": 13,
+          "datasource": {"type": "victoriametrics-metrics-datasource", "uid": "vm-metrics"},
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "histogram_quantile(0.5, sum by (le) (rate(http_request_duration_seconds_bucket[5m])))",
+              "legendFormat": "p50"
+            },
+            {
+              "refId": "B",
+              "expr": "histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket[5m])))",
+              "legendFormat": "p95"
+            },
+            {
+              "refId": "C",
+              "expr": "histogram_quantile(0.99, sum by (le) (rate(http_request_duration_seconds_bucket[5m])))",
+              "legendFormat": "p99"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "decimals": 3,
+              "min": 0,
+              "custom": {
+                "lineWidth": 1,
+                "fillOpacity": 10,
+                "showPoints": "never",
+                "thresholdsStyle": {"mode": "line"}
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"color": "green", "value": null},
+                  {"color": "red", "value": 0.5}
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {"displayMode": "list", "placement": "bottom", "showLegend": true},
+            "tooltip": {"mode": "single", "sort": "none"}
+          }
+        },
+        {
+          "type": "timeseries",
+          "title": "Доля запросов быстрее 500 мс и линия SLO (95%)",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 21},
+          "id": 14,
+          "datasource": {"type": "victoriametrics-metrics-datasource", "uid": "vm-metrics"},
+          "targets": [
+            {"refId": "A", "expr": "sli:latency_le_500ms:ratio_rate5m", "legendFormat": "≤ 500 мс"}
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percentunit",
+              "decimals": 4,
+              "min": 0,
+              "max": 1,
+              "custom": {
+                "lineWidth": 2,
+                "fillOpacity": 15,
+                "showPoints": "never",
+                "thresholdsStyle": {"mode": "line"}
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"color": "red", "value": null},
+                  {"color": "green", "value": 0.95}
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {"displayMode": "list", "placement": "bottom", "showLegend": true},
+            "tooltip": {"mode": "single", "sort": "none"}
+          }
+        },
+        {
+          "type": "row",
+          "title": "Бизнес-метрики",
+          "gridPos": {"h": 1, "w": 24, "x": 0, "y": 29},
+          "id": 104,
+          "collapsed": false,
+          "panels": []
+        },
+        {
+          "type": "timeseries",
+          "title": "Создание задач: попытки и созданные",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 30},
+          "id": 15,
+          "datasource": {"type": "victoriametrics-metrics-datasource", "uid": "vm-metrics"},
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(rate(http_requests_total{method=\"POST\", route=\"/api/v1/projects/{project_id}/tasks\"}[5m]))",
+              "legendFormat": "попытки"
+            },
+            {
+              "refId": "B",
+              "expr": "sum(rate(nexadesk_tasks_created_total[5m]))",
+              "legendFormat": "создано"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "ops",
+              "decimals": 3,
+              "min": 0,
+              "custom": {"lineWidth": 1, "fillOpacity": 10, "showPoints": "never"}
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {"displayMode": "list", "placement": "bottom", "showLegend": true},
+            "tooltip": {"mode": "single", "sort": "none"}
+          }
+        },
+        {
+          "type": "timeseries",
+          "title": "Смены статуса: попытки, успехи, конфликты и ошибки",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 30},
+          "id": 16,
+          "datasource": {"type": "victoriametrics-metrics-datasource", "uid": "vm-metrics"},
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(rate(http_requests_total{method=\"POST\", route=\"/api/v1/tasks/{task_id}/transition\"}[5m]))",
+              "legendFormat": "попытки"
+            },
+            {
+              "refId": "B",
+              "expr": "sum(rate(nexadesk_tasks_transitions_total{result=\"success\"}[5m]))",
+              "legendFormat": "успехи"
+            },
+            {
+              "refId": "C",
+              "expr": "sum(rate(nexadesk_tasks_transitions_total{result=~\"conflict|error\"}[5m]))",
+              "legendFormat": "конфликты/ошибки"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "ops",
+              "decimals": 3,
+              "min": 0,
+              "custom": {"lineWidth": 1, "fillOpacity": 10, "showPoints": "never"}
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {"displayMode": "list", "placement": "bottom", "showLegend": true},
+            "tooltip": {"mode": "single", "sort": "none"}
+          }
+        },
+        {
+          "type": "row",
+          "title": "Синтетический пробер",
+          "gridPos": {"h": 1, "w": 24, "x": 0, "y": 38},
+          "id": 105,
+          "collapsed": false,
+          "panels": []
+        },
+        {
+          "type": "timeseries",
+          "title": "Успешность прогона сценария и линия SLO (99%)",
+          "gridPos": {"h": 8, "w": 8, "x": 0, "y": 39},
+          "id": 17,
+          "datasource": {"type": "victoriametrics-metrics-datasource", "uid": "vm-metrics"},
+          "targets": [
+            {"refId": "A", "expr": "sli:probe_success:ratio_rate5m", "legendFormat": "успешность"}
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percentunit",
+              "decimals": 4,
+              "min": 0,
+              "max": 1,
+              "custom": {
+                "lineWidth": 2,
+                "fillOpacity": 15,
+                "showPoints": "never",
+                "thresholdsStyle": {"mode": "line"}
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"color": "red", "value": null},
+                  {"color": "green", "value": 0.99}
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {"displayMode": "list", "placement": "bottom", "showLegend": true},
+            "tooltip": {"mode": "single", "sort": "none"}
+          }
+        },
+        {
+          "type": "timeseries",
+          "title": "Длительность сценария p95 и линия SLO (3 с)",
+          "gridPos": {"h": 8, "w": 8, "x": 8, "y": 39},
+          "id": 18,
+          "datasource": {"type": "victoriametrics-metrics-datasource", "uid": "vm-metrics"},
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sli:probe_duration_seconds:p95_5m",
+              "legendFormat": "p95 сценария"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "decimals": 3,
+              "min": 0,
+              "custom": {
+                "lineWidth": 2,
+                "fillOpacity": 15,
+                "showPoints": "never",
+                "thresholdsStyle": {"mode": "line"}
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"color": "green", "value": null},
+                  {"color": "red", "value": 3}
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {"displayMode": "list", "placement": "bottom", "showLegend": true},
+            "tooltip": {"mode": "single", "sort": "none"}
+          }
+        },
+        {
+          "type": "timeseries",
+          "title": "Ошибки сценария по шагам",
+          "gridPos": {"h": 8, "w": 8, "x": 16, "y": 39},
+          "id": 19,
+          "datasource": {"type": "victoriametrics-metrics-datasource", "uid": "vm-metrics"},
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum by (step) (rate(nexadesk_probe_step_failures_total[5m]))",
+              "legendFormat": "{{step}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "ops",
+              "decimals": 3,
+              "min": 0,
+              "custom": {"lineWidth": 1, "fillOpacity": 20, "showPoints": "never"}
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {"displayMode": "list", "placement": "bottom", "showLegend": true},
+            "tooltip": {"mode": "single", "sort": "none"}
+          }
+        }
+      ],
+      "refresh": "30s",
+      "schemaVersion": 39,
+      "tags": ["nexadesk", "sli", "slo"],
+      "time": {"from": "now-3h", "to": "now"},
+      "timezone": "browser",
+      "title": "NexaDesk SLI / SLO / SLA",
+      "uid": "nexadesk-sli-slo",
+      "version": 1
+    }

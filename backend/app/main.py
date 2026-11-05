@@ -1,8 +1,9 @@
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import health_router, v1_router
+from app.api import faults_router, health_router, v1_router
 from app.core import API_V1_PREFIX, get_settings, limiter
+from app.core.faults import fault_guard
 from app.core.logger import configure_logging
 from app.core.middleware import MetricsMiddleware, RequestLoggingMiddleware
 from app.exceptions import register_exception_handlers
@@ -32,4 +33,10 @@ app.add_middleware(MetricsMiddleware)
 app.state.limiter = limiter
 register_exception_handlers(app)
 app.include_router(health_router, prefix="/health")
-app.include_router(v1_router, prefix=API_V1_PREFIX)
+app.include_router(
+    v1_router,
+    prefix=API_V1_PREFIX,
+    dependencies=[Depends(fault_guard)],
+)
+if settings.faults_enabled:
+    app.include_router(faults_router)

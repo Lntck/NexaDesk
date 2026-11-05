@@ -39,6 +39,16 @@ HTTP_REQUESTS_IN_PROGRESS = Gauge(
 )
 APP_INFO = Info("app", "Application build information.")
 
+FAULT_INJECTION_ACTIVE = Gauge(
+    "nexadesk_fault_injection_active",
+    "Whether the demo fault injection is degrading requests right now.",
+)
+FAULT_INJECTED_TOTAL = Counter(
+    "nexadesk_fault_injected_total",
+    "Faults injected into requests by kind.",
+    ["kind"],
+)
+
 TASKS_CREATED_TOTAL = Counter(
     "nexadesk_tasks_created_total",
     "Tasks created by priority.",

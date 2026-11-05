@@ -19,6 +19,8 @@ spec:
         app.kubernetes.io/component: ui
     spec:
       securityContext:
+        runAsUser: 472
+        runAsGroup: 472
         fsGroup: 472
         seccompProfile:
           type: RuntimeDefault
@@ -28,9 +30,11 @@ spec:
           imagePullPolicy: IfNotPresent
           env:
             - name: GF_PLUGINS_PREINSTALL
-              value: "victoriametrics-logs-datasource"
+              value: "victoriametrics-logs-datasource,victoriametrics-metrics-datasource"
             - name: GF_USERS_ALLOW_SIGN_UP
               value: "false"
+            - name: GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH
+              value: /var/lib/grafana/dashboards/nexadesk-sli-slo.json
           ports:
             - name: http
               containerPort: 3000
@@ -59,6 +63,12 @@ spec:
             - name: datasources
               mountPath: /etc/grafana/provisioning/datasources
               readOnly: true
+            - name: dashboard-providers
+              mountPath: /etc/grafana/provisioning/dashboards
+              readOnly: true
+            - name: dashboards
+              mountPath: /var/lib/grafana/dashboards
+              readOnly: true
       volumes:
         - name: storage
           persistentVolumeClaim:
@@ -66,3 +76,9 @@ spec:
         - name: datasources
           configMap:
             name: grafana-datasources
+        - name: dashboard-providers
+          configMap:
+            name: grafana-dashboard-providers
+        - name: dashboards
+          configMap:
+            name: grafana-dashboards
