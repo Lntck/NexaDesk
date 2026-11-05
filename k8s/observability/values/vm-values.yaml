@@ -1,4 +1,5 @@
 server:
+  retentionPeriod: 35d
   scrape:
     enabled: true
     configMap: ""

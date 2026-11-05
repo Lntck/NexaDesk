@@ -145,16 +145,21 @@ kubernetes.pod_namespace:nexadesk | stats by (kubernetes.container_name) count()
   ConfigMap together with log level rules. Credentials are admin/admin, port-forward
   svc/grafana -n observability 3000:3000
 * vmalert evaluates the nexadesk-logs rule group (type vlogs) every minute with a 2
-  minute pending window: BackendErrors on ERROR records from the backend, DbRoleErrors
-  on postgres role errors on nexadesk-db-postgresql-0. Port-forward svc/vmalert
-  -n observability 8880:8880 and open /vmalert
-* Alertmanager groups and deduplicates fired alerts. The bundled receiver is named
-  "null" and drops them: alerts are evaluated and visible in vmalert, but not
-  delivered anywhere. Add a real receiver (webhook, mail) in
-  observability/monitoring/alertmanager-config.yaml to get deliveries
+  minute pending window: DbRoleErrors on postgres role errors on
+  nexadesk-db-postgresql-0. Port-forward svc/vmalert -n observability 8880:8880 and
+  open /vmalert
+* vmalert-slo evaluates the SLI recording rules and fires four alerts:
+  APIHighErrorRate and SLOLatencyP95High on service metrics plus
+  BackendMemoryPressure and BackendHighCPU on Python runtime metrics (process_* /
+  python_*). Rules live in observability/monitoring/vmalert-slo-rules.yaml;
+  port-forward svc/vmalert-slo -n observability 8880:8880 and open /vmalert
+* Alertmanager groups and deduplicates fired alerts and delivers them to an
+  external webhook (webhook.site, configured in
+  observability/monitoring/alertmanager-config.yaml). Inspect delivered payloads
+  in the webhook.site UI for that endpoint
 
-The stack is log-based today. Metrics (vmagent, VictoriaMetrics, dashboards) are a
-planned addition.
+Logs go to VictoriaLogs and metrics go to VictoriaMetrics; both are provisioned as
+code in observability/.
 
 ## Notes
 

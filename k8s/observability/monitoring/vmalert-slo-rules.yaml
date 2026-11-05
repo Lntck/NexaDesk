@@ -20,6 +20,10 @@ data:
             expr: |
               1 - (sum(increase(http_requests_total{status=~"5.."}[30d]))
                 / sum(increase(http_requests_total[30d])))
+          - record: sli:availability:error_ratio_rate5m
+            expr: |
+              sum(rate(http_requests_total{status=~"5.."}[5m]))
+                / sum(rate(http_requests_total[5m]))
           - record: sli:latency_le_500ms:ratio_rate5m
             expr: |
               sum(rate(http_request_duration_seconds_bucket{le="0.5"}[5m]))
@@ -39,11 +43,11 @@ data:
           - record: sli:tasks_created_success:ratio_rate30d
             expr: |
               sum(increase(nexadesk_tasks_created_total[30d]))
-                / sum(increase(http_requests_total{method="POST", route="/api/v1/projects/{project_id}/tasks"}[30d]))
+                / sum(increase(http_requests_total{method="POST", route="/api/v1/projects/{project_id}/tasks", status!~"4.."}[30d]))
           - record: sli:transitions_success:ratio_rate30d
             expr: |
               sum(increase(nexadesk_tasks_transitions_total{result="success"}[30d]))
-                / sum(increase(http_requests_total{method="POST", route="/api/v1/tasks/{task_id}/transition"}[30d]))
+                / sum(increase(http_requests_total{method="POST", route="/api/v1/tasks/{task_id}/transition", status!~"4.."}[30d]))
           - record: sli:probe_success:ratio_rate5m
             expr: |
               sum(increase(nexadesk_probe_runs_total{result="success"}[5m]))
@@ -60,43 +64,51 @@ data:
       - name: nexadesk-slo-alerts
         interval: 1m
         rules:
-          - alert: SLOAvailabilityBreached
-            expr: sli:availability:ratio_rate5m < 0.999
-            for: 5m
+          - alert: APIHighErrorRate
+            expr: sli:availability:error_ratio_rate5m > 0.05
+            for: 10m
             labels:
-              severity: warning
+              severity: critical
+              service: nexadesk-backend
               slo: availability
             annotations:
-              description: 'Доступность API {{ $value | humanizePercentage }} за 5 минут, цель SLO 99.9%'
-          - alert: SLOLatencyBreached
+              summary: 'NexaDesk: высокий уровень ошибок 5xx'
+              description: 'Доля ответов 5xx {{ $value | humanizePercentage }} за 5 минут, порог 5%'
+          - alert: SLOLatencyP95High
             expr: sli:latency_p95_seconds:5m > 0.5
-            for: 5m
-            labels:
-              severity: warning
-              slo: latency
-            annotations:
-              description: 'Задержка p95 {{ $value | humanizeDuration }} за 5 минут, цель SLO 500 мс'
-          - alert: SLOTaskCreationBreached
-            expr: sli:tasks_created_success:ratio_rate30d < 0.995
-            for: 15m
-            labels:
-              severity: warning
-              slo: task-creation
-            annotations:
-              description: 'Успешность создания задач {{ $value | humanizePercentage }} за 30 дней, цель SLO 99.5%'
-          - alert: SLOTransitionBreached
-            expr: sli:transitions_success:ratio_rate30d < 0.99
-            for: 15m
-            labels:
-              severity: warning
-              slo: transitions
-            annotations:
-              description: 'Успешность смены статуса {{ $value | humanizePercentage }} за 30 дней, цель SLO 99%'
-          - alert: SLOUserJourneyBreached
-            expr: sli:probe_success:ratio_rate5m < 0.99
             for: 10m
             labels:
               severity: warning
-              slo: user-journey
+              service: nexadesk-backend
+              slo: latency
             annotations:
-              description: 'Синтетический сценарий завершается успешно в {{ $value | humanizePercentage }} прогонов, цель SLO 99%'
+              summary: 'NexaDesk: p95 задержки выше 500 мс'
+              description: 'Задержка p95 {{ $value | humanizeDuration }} за 5 минут, цель 500 мс'
+
+      - name: nexadesk-runtime
+        interval: 1m
+        rules:
+          - alert: BackendMemoryPressure
+            expr: |
+              max by (pod) (
+                process_resident_memory_bytes{namespace="nexadesk", pod=~"backend-.*"}
+              ) / (512 * 1024 * 1024) > 0.85
+            for: 10m
+            labels:
+              severity: critical
+              service: nexadesk-backend
+            annotations:
+              summary: 'NexaDesk: backend приближается к лимиту памяти'
+              description: 'RSS {{ $value | humanizePercentage }} от лимита 512Mi на поде {{ $labels.pod }}'
+          - alert: BackendHighCPU
+            expr: |
+              max by (pod) (
+                rate(process_cpu_seconds_total{namespace="nexadesk", pod=~"backend-.*"}[5m])
+              ) > 0.8
+            for: 10m
+            labels:
+              severity: warning
+              service: nexadesk-backend
+            annotations:
+              summary: 'NexaDesk: backend упирается в лимит CPU'
+              description: '{{ printf "%.2f" $value }} ядра занято процессом на поде {{ $labels.pod }} (лимит 1 core)'

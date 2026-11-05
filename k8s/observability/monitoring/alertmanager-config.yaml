@@ -8,11 +8,25 @@ metadata:
     app.kubernetes.io/component: alerting
 data:
   alertmanager.yml: |
+    global:
+      resolve_timeout: 5m
+
     route:
-      receiver: "null"
-      group_by: [alertname]
+      receiver: "webhook"
+      group_by: [alertname, severity, service]
       group_wait: 10s
       group_interval: 1m
-      repeat_interval: 12h
+      repeat_interval: 4h
+      routes:
+        - matchers: ['severity="critical"']
+          receiver: "webhook"
+          repeat_interval: 1h
+        - matchers: ['severity="warning"']
+          receiver: "webhook"
+          repeat_interval: 4h
+
     receivers:
-      - name: "null"
+      - name: "webhook"
+        webhook_configs:
+          - url: "https://webhook.site/8341f70e-4dbc-4432-9d99-461a9d1fd47d"
+            send_resolved: true
