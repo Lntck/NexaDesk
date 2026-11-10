@@ -6,7 +6,7 @@ import httpx
 import pytest
 from prometheus_client import REGISTRY
 
-from prober.main import record_run
+from prober.main import init_step_failure_counters, record_run
 from prober.scenario import (
     SCENARIO_STEPS,
     STEP_TRANSITION_TASK,
@@ -194,6 +194,17 @@ def test_ensure_account_registers_when_login_is_rejected():
         "/api/v1/register",
         "/api/v1/login",
     ]
+
+
+def test_init_step_failure_counters_registers_every_step():
+    init_step_failure_counters()
+
+    for step in SCENARIO_STEPS:
+        value = REGISTRY.get_sample_value(
+            "nexadesk_probe_step_failures_total",
+            {"scenario": "user_journey", "step": step},
+        )
+        assert value is not None
 
 
 def test_record_run_publishes_success_metrics():
