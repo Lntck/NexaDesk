@@ -14,15 +14,15 @@ data:
         rules:
           - record: sli:availability:ratio_rate5m
             expr: |
-              1 - (sum(rate(http_requests_total{status=~"5.."}[5m]))
+              1 - ((sum(rate(http_requests_total{status=~"5.."}[5m])) or vector(0))
                 / sum(rate(http_requests_total[5m])))
           - record: sli:availability:ratio_rate30d
             expr: |
-              1 - (sum(increase(http_requests_total{status=~"5.."}[30d]))
+              1 - ((sum(increase(http_requests_total{status=~"5.."}[30d])) or vector(0))
                 / sum(increase(http_requests_total[30d])))
           - record: sli:availability:error_ratio_rate5m
             expr: |
-              sum(rate(http_requests_total{status=~"5.."}[5m]))
+              (sum(rate(http_requests_total{status=~"5.."}[5m])) or vector(0))
                 / sum(rate(http_requests_total[5m]))
           - record: sli:latency_le_500ms:ratio_rate5m
             expr: |
