@@ -19,6 +19,7 @@ from prober.scenario import (
     DEFAULT_PROJECT_KEY,
     REQUEST_TIMEOUT_S,
     SCENARIO_NAME,
+    SCENARIO_STEPS,
     ScenarioError,
     StepTiming,
     UserJourney,
@@ -61,6 +62,20 @@ PROBE_LAST_SUCCESS_TIMESTAMP = Gauge(
 
 DEFAULT_INTERVAL_S = 30.0
 DEFAULT_METRICS_PORT = 9102
+
+
+def init_step_failure_counters() -> None:
+    """Create zero-valued failure counters for every scenario step.
+
+    A prometheus_client Counter child is registered on first use. Publishing
+    all steps at startup keeps their series present, so rate() returns 0
+    instead of no data while the scenario is healthy.
+
+    Returns:
+        None
+    """
+    for step in SCENARIO_STEPS:
+        PROBE_STEP_FAILURES_TOTAL.labels(scenario=SCENARIO_NAME, step=step)
 
 
 @dataclass(frozen=True)
@@ -198,6 +213,7 @@ def main() -> None:
         format="%(asctime)s %(levelname)s %(name)s %(message)s",
     )
     settings = Settings.from_env()
+    init_step_failure_counters()
     start_http_server(settings.metrics_port)
     logger.info(
         "probing %s every %.0fs, metrics on :%d",
