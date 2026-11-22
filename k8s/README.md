@@ -98,6 +98,14 @@ RegularExpression match precedence over PathPrefix is implementation-specific in
 Gateway API, but Envoy Gateway prioritises regex matches: this was verified with marker
 rules on a live cluster. Keep the SSE rule as RegularExpression when editing the routes.
 
+## Fault injection
+
+`FAULTS_ENABLED` exposes `/internal/faults` for the SLI/SLO demo. The switch keeps its
+state in process memory: with more than one backend replica a toggle request changes only
+the replica that served it, while the gateway may route later requests to another replica.
+The demo therefore behaves fully only on a single replica; on a multi-replica deployment
+pin traffic to one pod or accept a partial effect. Production keeps the toggle disabled.
+
 ## Metrics
 
 * the backend serves OpenMetrics at /metrics on a dedicated port (METRICS_PORT,

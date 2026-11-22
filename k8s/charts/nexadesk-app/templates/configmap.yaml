@@ -26,6 +26,8 @@ data:
   DEBUG: {{ .Values.config.debug | default "false" | quote }}
 
   DEPLOYMENT_ENVIRONMENT_NAME: {{ .Values.config.environment | default "dev" | quote }}
+  SERVICE_NAME: "nexadesk-backend"
+  SERVICE_VERSION: {{ .Values.backend.image.tag | default .Chart.AppVersion | trimPrefix "v" | quote }}
   LOG_LEVEL: {{ .Values.config.logLevel | default "INFO" | quote }}
 
   SSE_HEARTBEAT_S: {{ .Values.config.sseHeartbeatS | default 15 | quote }}
