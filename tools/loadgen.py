@@ -7,6 +7,8 @@ writes through the same endpoints a real user would use.
 
 Usage:
     python tools/loadgen.py --target http://localhost:8080 --rps 5
+    python tools/loadgen.py --target http://localhost:8080 --rps 2 \
+        --header 'x-user-group=beta'
 """
 
 from __future__ import annotations
@@ -248,6 +250,24 @@ class LoadSession:
         return {"Authorization": f"Bearer {self._token or ''}"}
 
 
+def parse_header(raw: str) -> tuple[str, str]:
+    """Split one NAME=VALUE command line header pair.
+
+    Args:
+        raw: header in ``NAME=VALUE`` form.
+
+    Returns:
+        tuple[str, str]: header name and value.
+
+    Raises:
+        argparse.ArgumentTypeError: when the pair has no ``=`` separator.
+    """
+    name, separator, value = raw.partition("=")
+    if not separator or not name.strip():
+        raise argparse.ArgumentTypeError(f"expected NAME=VALUE, got {raw!r}")
+    return name.strip(), value.strip()
+
+
 async def generate(args: argparse.Namespace) -> None:
     """Drive traffic until the requested duration is over.
 
@@ -258,11 +278,18 @@ async def generate(args: argparse.Namespace) -> None:
         None
     """
     async with httpx.AsyncClient(
-        base_url=args.target, timeout=httpx.Timeout(10.0)
+        base_url=args.target,
+        timeout=httpx.Timeout(10.0),
+        headers=args.headers,
     ) as client:
         session = LoadSession(client, args.email, args.password, args.project_key)
         await session.start()
-        logger.info("generating %.1f rps against %s", args.rps, args.target)
+        logger.info(
+            "generating %.1f rps against %s%s",
+            args.rps,
+            args.target,
+            f" with headers {args.headers}" if args.headers else "",
+        )
 
         deadline = time.perf_counter() + args.duration if args.duration else None
         delay = 1.0 / args.rps
@@ -293,7 +320,20 @@ def main() -> None:
     parser.add_argument("--email", default="loadgen@nexadesk.dev")
     parser.add_argument("--password", default="loadgen-strong-pass")
     parser.add_argument("--project-key", default="LOAD")
+    parser.add_argument(
+        "--header",
+        dest="headers",
+        action="append",
+        type=parse_header,
+        default=[],
+        metavar="NAME=VALUE",
+        help=(
+            "extra request header applied to every call; repeatable. "
+            "Used for A/B routing, e.g. --header 'x-user-group=beta'"
+        ),
+    )
     args = parser.parse_args()
+    args.headers = dict(args.headers)
 
     logging.basicConfig(
         level=logging.INFO,
