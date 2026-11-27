@@ -1,6 +1,6 @@
 backend:
   enabled: true
-  replicaCount: 1
+  replicaCount: 2
   image:
     repository: ghcr.io/nexadesk/backend
     tag: v1.4.0
@@ -12,7 +12,7 @@ backend:
 
 frontend:
   enabled: true
-  replicaCount: 1
+  replicaCount: 2
   image:
     repository: ghcr.io/nexadesk/frontend
     tag: v1.1.0

@@ -1,0 +1,256 @@
+# Blue/Green demo: two complete Deployments stand side by side.
+#
+# Blue runs v1.3.1, green runs v1.4.0. Both have their own Service, so the
+# switch is one HTTPRoute change: route-blue.yaml or route-green.yaml.
+# Nothing rolls gradually, and rollback is the same single apply.
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-blue
+  namespace: nexadesk
+  labels:
+    app.kubernetes.io/name: nexadesk-strategy
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/part-of: nexadesk
+    strategy: blue-green
+    track: blue
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: nexadesk-strategy
+    app.kubernetes.io/component: backend
+    strategy: blue-green
+    track: blue
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http
+      protocol: TCP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-blue
+  namespace: nexadesk
+  labels:
+    app.kubernetes.io/name: nexadesk-strategy
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/part-of: nexadesk
+    strategy: blue-green
+    track: blue
+spec:
+  replicas: 2
+  minReadySeconds: 5
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: nexadesk-strategy
+      app.kubernetes.io/component: backend
+      strategy: blue-green
+      track: blue
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: nexadesk-strategy
+        app.kubernetes.io/component: backend
+        app.kubernetes.io/part-of: nexadesk
+        strategy: blue-green
+        track: blue
+        version: "1.3.1"
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9100"
+        prometheus.io/path: "/metrics"
+    spec:
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: backend
+          image: ghcr.io/nexadesk/backend:v1.3.1
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          ports:
+            - name: http
+              containerPort: 8000
+              protocol: TCP
+            - name: metrics
+              containerPort: 9100
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: app-config
+            - secretRef:
+                name: app-secrets
+          env:
+            - name: SERVICE_VERSION
+              value: "1.3.1"
+            - name: K8S_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          startupProbe:
+            httpGet:
+              path: /health/live
+              port: http
+            failureThreshold: 30
+            periodSeconds: 2
+            timeoutSeconds: 3
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 384Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-green
+  namespace: nexadesk
+  labels:
+    app.kubernetes.io/name: nexadesk-strategy
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/part-of: nexadesk
+    strategy: blue-green
+    track: green
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: nexadesk-strategy
+    app.kubernetes.io/component: backend
+    strategy: blue-green
+    track: green
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http
+      protocol: TCP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-green
+  namespace: nexadesk
+  labels:
+    app.kubernetes.io/name: nexadesk-strategy
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/part-of: nexadesk
+    strategy: blue-green
+    track: green
+spec:
+  replicas: 2
+  minReadySeconds: 5
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: nexadesk-strategy
+      app.kubernetes.io/component: backend
+      strategy: blue-green
+      track: green
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: nexadesk-strategy
+        app.kubernetes.io/component: backend
+        app.kubernetes.io/part-of: nexadesk
+        strategy: blue-green
+        track: green
+        version: "1.4.0"
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9100"
+        prometheus.io/path: "/metrics"
+    spec:
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: backend
+          image: ghcr.io/nexadesk/backend:v1.4.0
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          ports:
+            - name: http
+              containerPort: 8000
+              protocol: TCP
+            - name: metrics
+              containerPort: 9100
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: app-config
+            - secretRef:
+                name: app-secrets
+          env:
+            - name: SERVICE_VERSION
+              value: "1.4.0"
+            - name: K8S_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          startupProbe:
+            httpGet:
+              path: /health/live
+              port: http
+            failureThreshold: 30
+            periodSeconds: 2
+            timeoutSeconds: 3
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 384Mi

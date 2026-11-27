@@ -1577,3 +1577,124 @@ data:
       "title": "NexaDesk SLI / SLO / SLA",
       "uid": "nexadesk-sli-slo"
     }
+  nexadesk-deployment-strategies.json: |
+    {
+      "annotations": {
+        "list": []
+      },
+      "description": "Один график RPS по версиям backend. Версия берётся из app_info и джойнится с http_requests_total по namespace и pod, поэтому поды стратегий (backend-rolling-*, backend-blue-*, backend-canary-*, backend-ab-*, backend-shadow-*) учитываются автоматически.",
+      "editable": true,
+      "graphTooltip": 1,
+      "links": [],
+      "panels": [
+        {
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "vm-metrics"
+          },
+          "description": "Запросы в секунду по версиям приложения. Во время rolling видны обе версии, пока идёт замена подов; во время canary высота линий соответствует весам; в A/B обе версии живут одновременно; в shadow mirror-под получает копию трафика и тоже виден на графике. Если поды версии удалены, линия не обрывается, а некоторое время остаётся на нуле и затем исчезает.",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "insertNulls": false,
+                "lineInterpolation": "linear",
+                "lineWidth": 2,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  }
+                ]
+              },
+              "unit": "reqps"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 14,
+            "w": 24,
+            "x": 0,
+            "y": 0
+          },
+          "id": 1,
+          "options": {
+            "legend": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "displayMode": "table",
+              "placement": "right",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "victoriametrics-metrics-datasource",
+                "uid": "vm-metrics"
+              },
+              "editorMode": "code",
+              "expr": "sum by (version) (\n  rate(http_requests_total{namespace=\"nexadesk\"}[$__rate_interval])\n  * on (namespace, pod) group_left(version)\n  last_over_time(app_info{namespace=\"nexadesk\", service=\"nexadesk-backend\"}[5m])\n)\nor\nsum by (version) (\n  0 * last_over_time(app_info{namespace=\"nexadesk\", service=\"nexadesk-backend\"}[5m])\n)",
+              "instant": false,
+              "legendFormat": "{{version}}",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "title": "RPS по версиям",
+          "type": "timeseries"
+        }
+      ],
+      "refresh": "5s",
+      "schemaVersion": 39,
+      "tags": [
+        "nexadesk",
+        "deployment-strategies",
+        "rps"
+      ],
+      "time": {
+        "from": "now-30m",
+        "to": "now"
+      },
+      "timezone": "browser",
+      "title": "NexaDesk: RPS по версиям",
+      "uid": "nexadesk-deployment-strategies"
+    }

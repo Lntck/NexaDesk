@@ -1,0 +1,79 @@
+# A/B routing by header: x-user-group: beta -> B (v1.4.0), everything else
+# -> A (v1.3.1). The header rule comes first and is more specific, so the
+# generic /api rule catches only requests without the beta header.
+#
+# Verify (the 401 body is fine, only the response header matters):
+#   curl -si "$GW/api/v1/projects" -H 'x-user-group: beta' | grep X-Deployment
+#   curl -si "$GW/api/v1/projects"                         | grep X-Deployment
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: api
+  namespace: nexadesk
+  labels:
+    app.kubernetes.io/name: nexadesk
+    app.kubernetes.io/component: api-routing
+    app.kubernetes.io/part-of: nexadesk
+    strategy: ab
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: nexadesk
+  rules:
+    - name: sse
+      matches:
+        - path:
+            type: RegularExpression
+            value: "^/api/v1/projects/[0-9]+/events/?$"
+      timeouts:
+        request: "0s"
+        backendRequest: "0s"
+      backendRefs:
+        - name: backend-ab-a
+          port: 8000
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /health
+      timeouts:
+        request: "30s"
+      backendRefs:
+        - name: backend-ab-a
+          port: 8000
+    - name: ab-beta
+      matches:
+        - path:
+            type: PathPrefix
+            value: /api
+          headers:
+            - type: Exact
+              name: x-user-group
+              value: beta
+      timeouts:
+        request: "30s"
+      filters:
+        - type: ResponseHeaderModifier
+          responseHeaderModifier:
+            set:
+              - name: X-Deployment
+                value: ab-b
+      backendRefs:
+        - name: backend-ab-b
+          port: 8000
+    - name: ab-default
+      matches:
+        - path:
+            type: PathPrefix
+            value: /api
+      timeouts:
+        request: "30s"
+      filters:
+        - type: ResponseHeaderModifier
+          responseHeaderModifier:
+            set:
+              - name: X-Deployment
+                value: ab-a
+      backendRefs:
+        - name: backend-ab-a
+          port: 8000
